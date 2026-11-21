@@ -1,0 +1,38 @@
+---
+description: >-
+  Communication language resolution mechanism. The active value lives in LANGUAGE config —
+  see the Config Resolution mechanism in `200-project-design-rules.mdc`.
+alwaysApply: true
+---
+
+# Communication Language
+
+## LANGUAGE config (Active Setting)
+
+The active `<communication-language>` and `<lang-code>` are resolved from **LANGUAGE
+config**, per the Config Resolution mechanism in `200-project-design-rules.mdc`:
+`.cursor/apm_config/LANGUAGE.default.md` (English) unless overridden in full by
+`doc/apm_config/LANGUAGE.user.md`.
+
+The install/migration script's `--lang` parameter seeds `LANGUAGE.user.md` on first
+install (see `scripts/install_into_project.py`); edit the file by hand afterwards to
+change it.
+
+## Rules Derived from This Setting
+
+- **Chat with the user**: always in `<communication-language>`, unless the user writes
+  otherwise.
+- **APM documents** (reports, reviews, plans): prose in `<communication-language>`, per
+  `070-project-management.mdc`.
+- **Rules and skills**: always **English**. The bilingual-comment convention for editing
+  them (`<!-- <lang-code>: ... -->`) is in `000-meta-rules-and-skills.mdc` — relevant only
+  when authoring rules, not when using them.
+
+Known `<lang-code>` values: `en`, `cs`, `de` (any other code is accepted verbatim).
+
+## How to Change the Communication Language
+
+Edit `doc/apm_config/LANGUAGE.user.md` (create it if missing) — set
+`<communication-language>` and `<lang-code>` there. **Never** edit
+`.cursor/apm_config/LANGUAGE.default.md` in a consuming project — it is regenerated on
+every `scripts/install_into_project.py` run.

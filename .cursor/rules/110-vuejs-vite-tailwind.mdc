@@ -1,0 +1,236 @@
+---
+description: >-
+  Vue.js 3 + Vite + Tailwind CSS standards — Composition API, TypeScript,
+  component structure, state management, testing. Activated for Vue SFCs and TS files
+  of the frontend (frontend/, web/, composables/, stores/).
+globs: "**/*.vue, **/frontend/**/*.ts, **/web/**/*.ts, **/composables/**/*.ts, **/stores/**/*.ts, **/vite.config.*, **/tailwind.config.*"
+alwaysApply: false
+---
+
+# Vue.js 3 + Vite + Tailwind CSS
+
+
+Generic language rules: `220-javascript.mdc`, `230-typescript.mdc`; template markup
+(semantics, accessibility, forms) follows `210-html.mdc`.
+
+## Technology Stack
+
+
+- **Vue 3** with Composition API (`<script setup>`) — no Options API in new code.
+- **TypeScript** strict mode (`"strict": true` in `tsconfig.json`).
+- **Vite** as build tool — leverage HMR and lazy loading.
+- **Tailwind CSS** — utility-first; no custom CSS if Tailwind suffices.
+- **Pinia** for global state (replaces Vuex).
+- **Vue Router 4** for routing.
+- **VueUse** for composable utilities — prefer over custom implementations.
+
+## Project Structure
+
+
+In a web application with a separate backend, the Vue.js project lives in `frontend/`
+at the project root (see `060-project-structure.mdc` — web application layout).
+The `src/` below is the internal Vite layout inside `frontend/`.
+
+```
+frontend/
+├── src/
+│   ├── assets/       # Static files
+│   ├── components/   # Reusable components (atomic)
+│   │   ├── ui/       # Generic UI elements (Button, Input, Modal…)
+│   │   └── features/ # Domain-specific components
+│   ├── composables/  # Shared logic (use*.ts)
+│   ├── layouts/      # Layout components (DefaultLayout, AuthLayout)
+│   ├── pages/        # Route components (1 page = 1 file)
+│   ├── router/       # Vue Router configuration
+│   ├── stores/       # Pinia stores
+│   ├── types/        # Shared TypeScript types
+│   └── utils/        # Helper functions
+├── Dockerfile
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## Components
+
+
+```vue
+<!-- ✅ Correct pattern — <script setup> with TypeScript -->
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import type { User } from '@/types/user'
+
+interface Props {
+  user: User
+  isLoading?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), { isLoading: false })
+const emit = defineEmits<{ update: [user: User]; delete: [id: string] }>()
+
+const displayName = computed(() =>
+  `${props.user.firstName} ${props.user.lastName}`
+)
+</script>
+
+<template>
+  <div class="flex items-center gap-4 p-4 rounded-lg bg-white shadow-sm">
+    <span class="text-lg font-medium text-gray-900">{{ displayName }}</span>
+    <button
+      v-if="!isLoading"
+      class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      @click="emit('delete', user.id)"
+    >Delete</button>
+  </div>
+</template>
+```
+
+### Component Rules
+
+
+- File and component names: **PascalCase** (`UserCard.vue`).
+- Max ~200 lines per component; split into sub-components otherwise.
+- Props always typed via `defineProps<Interface>()`.
+- Emits always typed via `defineEmits<{...}>()`.
+- No `any` types.
+- Extract logic beyond 2–3 computed/refs into a composable (SRP).
+
+## Composables — Composition Pattern
+
+
+Composables are the primary logic-composition mechanism in Vue 3 — GoF **Composition Pattern**.
+
+```typescript
+// composables/useUser.ts
+// Pattern: Composition — reusable stateful logic decoupled from UI
+
+/**
+ * Fetch and expose a single user by ID.
+ *
+ * @param userId - Reactive user ID; re-fetches automatically on change.
+ * @returns Reactive user data, loading state, error, and derived fullName.
+ */
+export function useUser(userId: Ref<string>) {
+  const { data: user, isLoading, error } = useFetch<User>(
+    computed(() => `/api/users/${userId.value}`)
+  )
+  const fullName = computed(() =>
+    user.value ? `${user.value.firstName} ${user.value.lastName}` : ''
+  )
+  return { user, isLoading, error, fullName }
+}
+```
+
+- Name starts with `use` (`useUser`, `useAuth`, `useNotifications`).
+- Returns reactive data — never plain values.
+- One composable = one concern (SRP).
+- Test composables independently of components (`@vue/test-utils` not required).
+
+## Docstrings — TSDoc Style
+
+
+Every exported function, composable, and class has a TSDoc comment:
+
+```typescript
+/**
+ * Fetch paginated list of documents from the API.
+ *
+ * @param page - 1-based page number.
+ * @param pageSize - Number of items per page. Defaults to 20.
+ * @returns Reactive object with `data`, `total`, `isLoading`, `error`.
+ *
+ * @example
+ * const { data, isLoading } = useDocuments(page, 20)
+ */
+export function useDocuments(page: Ref<number>, pageSize = 20) { ... }
+```
+
+- Types are not repeated in JSDoc (they are in the TypeScript signature) — describe semantics only.
+- Add `@example` for composables and utility functions with non-trivial usage.
+- Document Props interfaces with an inline comment above each prop.
+
+## Pinia Store
+
+
+```typescript
+// stores/auth.ts
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null)
+  const isAuthenticated = computed(() => user.value !== null)
+
+  async function login(credentials: LoginCredentials) {
+    user.value = await authApi.login(credentials)
+  }
+  function logout() { user.value = null }
+
+  return { user, isAuthenticated, login, logout }
+})
+```
+
+- Prefer **Setup store** (function syntax) over Options store.
+- One store = one domain area.
+
+## Tailwind CSS
+
+
+```vue
+<!-- ✅ Utility-first — no custom CSS for trivial styles -->
+<div class="flex flex-col gap-6 max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900">Title</h1>
+</div>
+
+<!-- ✅ @apply only for repeated patterns in component CSS -->
+<style scoped>
+.btn-primary {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-lg
+         hover:bg-blue-700 transition-colors duration-200;
+}
+</style>
+```
+
+- Responsive prefixes: `sm:`, `md:`, `lg:` — mobile-first approach.
+- Dark mode: `dark:` prefix — configure `darkMode: 'class'` in `tailwind.config`.
+- Avoid inline styles (`style="..."`) — always use Tailwind.
+
+## Performance
+
+
+- Lazy-load routes: `component: () => import('./pages/Dashboard.vue')`.
+- Lazy-load heavy components: `defineAsyncComponent(() => import('./HeavyChart.vue'))`.
+- `v-memo` for expensive render lists.
+- `computed` instead of methods for derived data — auto-cached.
+
+## Testing
+
+
+- **Vitest** for unit tests (replaces Jest, integrated with Vite).
+- **Vue Test Utils** for component testing.
+- **Playwright** or **Cypress** for E2E tests.
+
+```typescript
+import { mount } from '@vue/test-utils'
+import UserCard from '@/components/UserCard.vue'
+
+test('displays full name', () => {
+  const wrapper = mount(UserCard, {
+    props: { user: { id: '1', firstName: 'Jan', lastName: 'Novák' } },
+  })
+  expect(wrapper.text()).toContain('Jan Novák')
+})
+```
+
+## .gitignore — Node/Vue-Specific Entries
+
+
+Add these to the project `.gitignore` when Node.js / Vue / Vite is used:
+
+```gitignore
+node_modules/
+dist/
+.output/
+.vite/
+coverage/
+*.local
+.env.local
+.env.*.local
+```

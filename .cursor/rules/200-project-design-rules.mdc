@@ -1,0 +1,54 @@
+---
+description: >-
+  Generic config-resolution mechanism (template default vs. project override) plus
+  binding project design invariants (DESIGN_RULES). Consulted by 000-model-policy.mdc
+  (AGENT_MODELS) and 000-communication-language.mdc (LANGUAGE) for their own config pairs.
+alwaysApply: true
+---
+
+# Project Config Resolution & Design Rules
+
+## Config Resolution mechanism
+
+Three settings are resolved this way: `DESIGN_RULES` (this rule), `AGENT_MODELS`
+(`000-model-policy.mdc`), `LANGUAGE` (`000-communication-language.mdc`).
+
+For a setting `<NAME>`:
+
+1. **Template default**: `.cursor/apm_config/<NAME>.default.md` — always exists, ships
+   with the template.
+2. **Project override**: `doc/apm_config/<NAME>.user.md` — created by
+   `scripts/install_into_project.py` (seeded from the default) or by hand; edited by the
+   Human.
+3. **Resolution**: if `<NAME>.user.md` exists, it **fully replaces** the default for that
+   setting (whole file, never a per-field merge). Otherwise the default applies.
+
+## Ownership inside `.cursor/`
+
+`.cursor/TEMPLATE_MANIFEST` lists every file the template owns. Two hard rules follow:
+
+- **Template-owned files are generated, never hand-edited.** A re-run of
+  `scripts/install_into_project.py` removes and rewrites exactly the manifest's files.
+  Config overrides belong in `doc/apm_config/*.user.md`.
+- **Project-owned rules, skills and commands live next to them and survive re-install.**
+  Rules use the reserved namespace `rules/9xx-<slug>.mdc` (template numbering ends at
+  `2xx`); skills `skills/<name>/SKILL.md` and commands `commands/<name>.md` under a name
+  the template does not use. A project rule may **narrow or extend** a template rule; to
+  **override** one, say so explicitly in `DESIGN_RULES.user.md` (which takes precedence).
+
+`scripts/check_installation.py` flags a rule outside `9xx-` that is not in the manifest
+as a probable orphan.
+
+## Binding Project Conventions (DESIGN_RULES)
+
+The resolved `DESIGN_RULES` content (mechanism above) is **binding design invariants**
+that take precedence over general rules.
+
+**MANDATORY**: Read the resolved `DESIGN_RULES` **before starting any coding task**.
+
+Consider these rules if they affect your changes.
+
+A **"Forbidden technologies"** entry in the resolved `DESIGN_RULES` takes precedence over
+the corresponding technology rule (`1xx-*.mdc`, `210`–`240`) — do not apply a technology
+rule to something the project has explicitly forbidden, even if a file matching its `globs`
+exists (e.g. a vendored file, a migration path being phased out).

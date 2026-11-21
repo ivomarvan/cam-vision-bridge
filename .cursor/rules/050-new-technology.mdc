@@ -1,0 +1,79 @@
+---
+description: >-
+  Checklist for adding a new language, framework, or infrastructure service to a project.
+  Use when introducing a new runtime, major framework, or infrastructure service —
+  not for individual library additions. Triggers on phrases like "add Python",
+  "integrate Redis", "set up Vue", "add new technology", "new service".
+alwaysApply: false
+---
+
+# Adding a New Technology — Checklist
+
+
+This rule applies when introducing a **new language runtime, major framework,
+or infrastructure service**. It does NOT apply to adding an individual library/package.
+
+Examples that trigger this checklist:
+- New language runtime: Python, Node.js, Go, Rust
+- New major framework: FastAPI, Vue.js, Django, React
+- New infrastructure service: PostgreSQL, Redis, Qdrant, RabbitMQ
+- New toolchain: ESP-IDF, CMake
+
+## Checklist
+
+
+Work through every item **before writing production code**. Exploratory/spike work
+is exempt — mark it clearly with a `spike/` branch prefix.
+
+### 1. Docker decision (mandatory)
+
+
+Consult `030-docker-policy.mdc` and choose one:
+
+- [ ] **Containerize** — add the service/runtime to `docker-compose.yml` with a pinned image version.
+- [ ] **Exempt** — add the technology to the Docker Exclude List in `030-docker-policy.mdc`
+  with a written justification. Default is containerization; exemption requires a reason.
+
+### 2. `.gitignore` — extend with technology-specific entries
+
+
+- [ ] Add build artifacts, caches, and generated files specific to this technology.
+- [ ] Source: check the language/framework rule (e.g. `100-python.mdc`, `110-vuejs-vite-tailwind.mdc`)
+  or use [gitignore.io](https://www.toptal.com/developers/gitignore) for the canonical list.
+
+### 3. `README.md` — update or create
+
+
+- [ ] Document: how to install the runtime/dependencies, how to run, how to test.
+- [ ] If Docker is used: update `README.docker.md` with the new service.
+
+### 4. Language or technology rule — create if missing
+
+
+- [ ] Does a `.cursor/rules/` file already exist for this technology? (e.g. `100-python.mdc`)
+- [ ] If not: create one following `000-meta-rules-and-skills.mdc`. Cover at minimum:
+  tooling, code style, `.gitignore` entries, documentation standard.
+
+### 5. Skill — create if the workflow is complex
+
+
+- [ ] Is there a multi-step, repeatable setup or operational workflow for this technology?
+- [ ] If yes: create a skill in `.cursor/skills/<technology-name>/SKILL.md`.
+
+### 6. Dependencies — pin and justify
+
+
+- [ ] All new dependencies are pinned to a specific version.
+- [ ] Each dependency has a justification comment in the dependency file.
+
+## Bulk registration (at project start)
+
+
+When several technologies are introduced **at once** (typically Phase 0 / `project-init`,
+before any Task exists), run this checklist **once per technology** as usual, but do not
+repeat the full prose per technology in `README.md`. Instead:
+
+- [ ] Record the outcome of items 1–6 above as **one consolidated table** in `README.md`
+  (columns: Technology | Docker decision | New rule/skill created | Dependency pinned).
+- [ ] One `docker-compose.yml` review pass covers all newly containerized services,
+  not one pass per technology.

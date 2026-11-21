@@ -1,0 +1,143 @@
+---
+description: >-
+  HTML standards — semantic markup, accessibility (WCAG 2.2 AA), forms, performance
+  (Core Web Vitals), security (CSP, SRI). Activated for HTML and server-side templates.
+globs: "**/*.html, **/*.htm, **/*.twig, **/*.blade.php, **/*.jinja, **/*.jinja2"
+alwaysApply: false
+---
+
+# HTML — Markup Standards
+
+
+## Baseline
+
+
+- Target the **WHATWG HTML Living Standard**; accessibility target is **WCAG 2.2 level AA**.
+- Markup describes **meaning**, CSS describes **presentation**, JS adds **behaviour** —
+  the page must stay usable (content readable, links working) before JS loads.
+- Indent with 2 spaces, lowercase element/attribute names, always quote attribute values.
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orders — Acme Shop</title>
+  <meta name="description" content="Overview of your recent orders.">
+  <link rel="stylesheet" href="/assets/app.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+```
+
+- `lang` on `<html>` is mandatory (screen readers, hyphenation, translation); mark
+  inline language changes with `lang` on the element.
+- Unique, descriptive `<title>` per page: specific part first, site name last.
+
+## Semantic Structure
+
+
+- Use landmarks: `<header>`, `<nav>`, `<main>` (exactly one), `<aside>`, `<footer>`;
+  `<article>` / `<section>` only with a heading.
+- **One `<h1>` per page**; heading levels never skip (`h2` → `h4` is a bug). Choose the
+  level by document outline, not by font size.
+- Native element first — ARIA only when no native element exists ("no ARIA is better than bad ARIA").
+
+```html
+<!-- ❌ Not focusable, no keyboard support, no role -->
+<div class="btn" onclick="save()">Save</div>
+
+<!-- ✅ Native button: focus, Enter/Space, role — all for free -->
+<button type="button" id="save">Save</button>
+
+<!-- ✅ Navigation = link; action = button -->
+<a href="/orders/42">Order #42</a>
+```
+
+- Prefer native interactive elements over custom widgets: `<dialog>` (modal, focus trap,
+  Esc), `popover` attribute, `<details>`/`<summary>`, `<input type="date">`.
+- Lists are `<ul>`/`<ol>`, tabular data is `<table>` with `<caption>` and `<th scope>` —
+  never tables for layout.
+
+## Accessibility
+
+
+- Every `<img>` has `alt`: a description of its **purpose** for content images, `alt=""`
+  for decorative ones.
+- Every interactive element has an **accessible name** — visible text, `<label>`, or
+  `aria-label` for icon-only controls.
+- Everything works with the **keyboard only**; focus order follows DOM order; never
+  remove the focus outline without a `:focus-visible` replacement; no positive `tabindex`.
+- Text contrast ≥ 4.5:1 (large text ≥ 3:1); information is never conveyed by color alone.
+- Link text makes sense out of context — ❌ "click here", ✅ "Download the 2026 report (PDF, 2 MB)".
+- Dynamic status messages use `role="status"` / `aria-live="polite"`; errors use `role="alert"`.
+
+## Forms
+
+
+```html
+<form action="/account/email" method="post" novalidate>
+  <label for="email">E-mail</label>
+  <input id="email" name="email" type="email" autocomplete="email" required
+         aria-describedby="email-hint email-error">
+  <p id="email-hint">We never share your e-mail.</p>
+  <p id="email-error" role="alert" hidden></p>
+
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">Save</button>
+</form>
+```
+
+- Every input has a programmatically associated `<label>` — a `placeholder` is not a label.
+- Use the correct `type`, `autocomplete`, and `inputmode` — mobile keyboards and password
+  managers depend on them.
+- Group related controls with `<fieldset>` + `<legend>` (radio groups, addresses).
+- Client-side validation is UX only — the **server always validates again**.
+- State-changing requests use `method="post"` with a CSRF token; never GET.
+
+## Performance (Core Web Vitals)
+
+
+```html
+<!-- ✅ LCP image: eager, high priority, explicit size (prevents layout shift / CLS) -->
+<img src="/img/hero.avif" alt="Team at work" width="1200" height="600" fetchpriority="high">
+
+<!-- ✅ Below-the-fold: lazy + responsive -->
+<img src="/img/p-800.webp" alt="Product photo" width="800" height="600" loading="lazy"
+     decoding="async"
+     srcset="/img/p-400.webp 400w, /img/p-800.webp 800w" sizes="(max-width: 600px) 100vw, 800px">
+```
+
+- Always set `width`/`height` (or CSS `aspect-ratio`) on images, video, and iframes — prevents CLS.
+- Never `loading="lazy"` on the LCP image; mark it `fetchpriority="high"`.
+- Scripts: `type="module"` or `defer` — never a blocking `<script>` in `<head>`.
+- Modern formats (AVIF/WebP) via `<picture>` or `srcset`; `preconnect` only for critical third-party origins.
+
+## Security
+
+
+- **No inline JavaScript**: no `onclick=""`, no `javascript:` URLs, no inline `<script>`
+  blocks without a CSP nonce — this is what makes a strict Content-Security-Policy possible.
+- Serve a strict CSP (nonce- or hash-based, `object-src 'none'`, `base-uri 'none'`) as an
+  HTTP header, not a `<meta>` tag.
+- Third-party assets from a CDN carry `integrity` (SRI) + `crossorigin="anonymous"`.
+  Prefer self-hosting.
+- External links with `target="_blank"` add `rel="noopener noreferrer"`.
+- Server-side templates: rely on the engine's **auto-escaping** (Twig, Blade `{{ }}`,
+  Jinja2 autoescape); raw output (`|raw`, `{!! !!}`, `|safe`) only for sanitized HTML,
+  with a comment stating where it was sanitized.
+
+## Styling Hooks
+
+
+- No `style=""` attributes and no presentational elements (`<b>`, `<font>`, `<center>`) —
+  use classes; `<strong>`/`<em>` only for semantic emphasis.
+- Do not style by `id`; `id` is for fragment links, `<label for>`, and ARIA references.
+- Test hooks use `data-testid` (or role/label queries) — never CSS classes.
+
+## Verification
+
+
+- Markup is validated (`html-validate`) and accessibility-checked (axe-core) before a
+  Task is done; automated checks catch ~40 % of WCAG issues — also do a keyboard-only pass.
+  Commands: `skills/node-dev/SKILL.md`.

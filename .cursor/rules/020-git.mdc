@@ -1,0 +1,88 @@
+---
+description: >-
+  Git rules — commit conventions, branching, PR workflow, and generic .gitignore.
+  Language-specific .gitignore entries live in the respective language rules.
+alwaysApply: true
+---
+
+# Git Rules
+
+
+## Absolute prohibitions (without explicit user consent)
+
+
+- **No** `git commit`, `git push`, `git pull`, `git merge`, `git rebase`, `git reset`.
+- **No** `git add` with destructive consequences.
+- **No** force push (`--force`, `--force-with-lease`) to `main`/`master`.
+- `git status` and `git diff` (read-only) are always safe.
+
+## Commit messages — Conventional Commits
+
+
+Format: `<type>(<scope>): <description in imperative, English>`
+
+```
+feat(auth): add JWT refresh token rotation
+fix(wifi): handle reconnection after deep sleep wake-up
+docs(readme): update build instructions for ESP-IDF 5.x
+refactor(parser): extract chunk boundary detection to separate function
+test(scraping): add integration test for robots.txt compliance
+chore(deps): bump pydantic to 2.7.0
+```
+
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`
+
+- Description in **imperative** English (`add`, not `added` or `adds`).
+- Max **72 characters** on the first line.
+- Body separated by a blank line — explains why, not what.
+- No vague messages (`fix stuff`, `update`, `wip`).
+- Use names of epic and task from project progress report.
+- **No Cursor attribution** — `.cursor/hooks/git/commit-msg` strips it automatically; after clone: `git config --local core.hooksPath .cursor/hooks/git`.
+
+## Branching (Git Flow lite)
+
+
+```
+master            ← production, always stable
+develop           ← integration of feature branches (optional for larger projects)
+feature/<desc>    ← new functionality
+fix/<desc>        ← bug fix
+chore/<desc>      ← maintenance, dependency updates
+spike/<desc>      ← exploratory work / experiment epic (070-project-management.mdc)
+```
+
+- Branches merged via **Pull Request / Merge Request** with code review.
+- Prefer **squash merge** for feature branches (clean history on `master`).
+- Delete the branch after merge.
+
+## `.gitignore`
+
+
+Each project **must** have a `.gitignore`. The generic base (secrets, IDE, OS artifacts,
+`nogit_data/`) lives in `060-project-structure.mdc`; language-specific entries in the
+respective language rule.
+
+## Pull Request conventions
+
+
+- PR title = Conventional Commit format (becomes the squash commit message).
+- PR description: what, why, how to test.
+- Each PR solves **one concern** — split large changes.
+- Before merge: CI green, code review from at least 1 person (even self-review after 24h).
+
+## Explicit Git Trigger Phrases (exceptions to prohibitions above)
+
+
+When Human's message contains one of these phrases, invoke skill `commit-task`:
+
+| Phrase (CS / EN) | Target branch | CI check |
+|---|---|---|
+| `... s commitem` / `... with commit` | `master` direct | — |
+| `... s commitem s CI` / `... with commit and CI` | `master` direct | iterative, max 3 |
+| `... s commitem do feature` / `... with feature commit` | new `feature/eNNN-tNNN-slug` | — |
+| `... s commitem do feature s CI` / `... with feature commit and CI` | new `feature/eNNN-tNNN-slug` | iterative, max 3 + squash merge |
+
+
+`/push` is the same explicit consent expressed as a slash command (see `commands/push.md`).
+Changes outside an APM Epic (typos, docs, config) need no APM ceremony — they follow this
+rule and the project's deterministic gate.

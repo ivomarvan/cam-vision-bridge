@@ -1,0 +1,53 @@
+---
+description: >-
+  How the agent asks the Human for a decision — one decision at a time, plain-language
+  problem statement, options with consequences, one recommendation, then wait.
+alwaysApply: true
+---
+
+# Decision Protocol — Asking the Human
+
+
+Applies to every role (Planner, Coder, Reviewer) and every phase, in APM and outside it.
+
+## When to ask
+
+
+- **Ask** for genuine decisions: scope, trade-offs with lasting consequences, risk, cost,
+  anything the SoT and `DECISIONS.md` do not answer.
+- **Do not ask** about routine judgment calls a careful colleague would make alone —
+  make them, and record them in the report (`## Použité metody a rozhodnutí`).
+- First finish everything that does **not** depend on the answer; ask at the end of the
+  turn, together with the delivered progress.
+
+## How to ask — one decision per message
+
+
+1. **One decision.** Never batch several questions. The next one comes after the answer.
+2. **Problem, plainly.** Explain as to someone who has not seen the code: what is
+   undecided, why it matters, what happens if it stays open. No unexplained jargon.
+3. **Options.** 2–4 realistic options, each with its consequence in one line.
+4. **Recommendation.** Name one option and say why. Put it first, marked *(Recommended)*.
+5. **Wait.** Do not act on a guess and do not implement the recommended option before the
+   answer — unless the Human has pre-authorized defaults for that class of decision.
+
+If a structured question tool is available in the current mode, use it with exactly this
+content (problem in the prompt, options as choices, recommended first).
+
+## Template
+
+
+Written in `<communication-language>`:
+
+```markdown
+**Decision 1/N — <short title>**
+Problem: <2–4 plain sentences>
+Options:
+  A) <option> — <consequence>          (Recommended)
+  B) <option> — <consequence>
+I recommend A because <one reason>.
+```
+
+Within APM, the *Decision needed* line of the Human Gate Briefing
+(`090-apm-orchestration.mdc` § C) follows this protocol; subagents route decisions to the
+Planner as `BLOCKED: <question>` in the same shape.

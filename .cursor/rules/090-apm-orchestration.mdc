@@ -1,0 +1,105 @@
+---
+description: >-
+  APM subagent orchestration — Planner/Coder/Reviewer protocol, band-based Human gate
+  policy, report tiers, and the Human Gate Briefing format. Apply when running Phase T/R
+  through subagents, or opening any Human gate (FT.7, FE.2, FER.2).
+globs: doc/project-progress/**/*.md
+alwaysApply: false
+---
+
+# APM Orchestration and Human Gates
+
+## Why band-based gates
+
+A Human gate after **every** Task does not scale — it makes methodology overhead the
+Human's main job instead of the project. The fix is not "skip review", it is "match gate
+cost to actual risk", using the Task's band (`low`/`medium`/`high`, see `000-model-policy.mdc`
+/ `AGENT_MODELS` config) as the deterministic trigger.
+
+## A — Planner ↔ subagent protocol
+
+Human runs the chat with the **Planner**; Planner spawns Coder and Reviewer as subagents.
+
+- The Reviewer forms its findings from `spec.md`, `dod.md`, the `git diff`, and its own
+  test run **first**; it opens `report.md` only afterwards, to check report integrity
+  (`review-task` steps R1–R4). The Planner's prompt to the Reviewer must not paraphrase
+  the report — the Coder's own wording (e.g. "tests pass") leaking into the prompt breaks
+  independence even with a fresh-context subagent.
+- **Diff scope.** If the working tree holds changes from more than this Task (nothing was
+  committed in between), the Reviewer diffs only the paths named in `spec.md` Outputs and
+  states in `review.md` that the review was path-scoped. The clean alternative is a
+  commit per Task — the Human decides that: after each APPROVE the Planner **offers**
+  a commit (one line: *"Commit this Task? Reply with a trigger phrase, `020-git.mdc`."*)
+  and never commits on its own.
+- **The parent window does not write code in Phase T** — except the `low`-band exception
+  in §D below. Otherwise the `model:` audit trail breaks and code ships unreviewed.
+- Read the verdict from `review.md`, never from your own summary of it.
+- Resolve ambiguity **before** dispatching a subagent — it cannot ask follow-ups, so a
+  vague Task Specification wastes an entire run.
+- If a Coder subagent hits a question it cannot answer from `spec.md`, it returns the
+  question to the **Planner**, not to the Human directly — the subagent did not open the
+  chat with the Human and has no way to ask it.
+- **Subagent completion signal** — a Coder/Reviewer subagent's final message to the
+  Planner is exactly one of:
+  - `DONE: <path to report.md or review.md>`
+  - `BLOCKED: <one question>`
+
+  No code, no diff, no prose summary in that message — the Planner reads the actual file,
+  never the subagent's own account of it (same principle as "read the verdict from
+  `review.md`" above).
+- **Resuming after a chat window fills up** — start the new Planner chat with: *"Read
+  `epic-NNN/plan.md` and the state of every task directory in it; continue from the first
+  Task that has no `review.md` with verdict APPROVE."* This is the standard handoff
+  sentence, not a one-off instruction to reconstruct each time.
+
+## B — Gate and report tier by band
+
+| Band | Human gate (FT.7) | Report tier | Written by |
+|---|---|---|---|
+| `high` | Every Task | Full (7 sections, see `070-project-management.mdc`) | Coder |
+| `medium` | None per Task — surfaced in the Epic Report table (§C) | Short: *What was implemented*, *Inputs/outputs*, *Regression test results*, *DoD* | Coder |
+| `low` | None — Reviewer gate (tests/lint) + APPROVE is sufficient | Micro: 5 lines — what, files touched, gate result | Coder, or Planner directly (§D) |
+
+A Task is not done without a Reviewer verdict in every band — for `low`, that is the
+deterministic gate alone when `AGENT_MODELS` has Reviewer `low` = `—` (the template
+default, see `000-model-policy.mdc`); if a project assigned a model there, an explicit
+`review.md` APPROVE is required.
+
+### Escalation raises the gate too
+
+Band escalation (second `REQUEST CHANGES`, see `000-model-policy.mdc`) raises the
+gate/report tier to match the **new** band, retroactively for that Task. A Task that
+escalated from `low` to `medium` no longer qualifies for a micro report — write the tier
+of the band it escalated to.
+
+## C — Human Gate Briefing
+
+Whenever the Planner actually opens a Human gate (`high`-band FT.7, FE.2 Epic Plan
+approval, FER.2 Roadmap review), lead with this briefing — do not hand over a raw report
+and wait:
+
+```markdown
+## Gate: <Task/Epic/Roadmap name>
+
+**Where we are:** 1–2 sentences — position in the Epic/project, what's done, what's next.
+**What changed:** 3–5 bullets, not the full report.
+**Decision needed:** one concrete question or A-vs-B choice with a recommendation
+(`005-decision-protocol.mdc`) — never "please approve", never several at once.
+**If you do nothing:** the default behavior / consequence of inaction.
+```
+
+## D — Low-band exception
+
+**Parent-window implementation.** For a `low`-band Task, the Planner may implement it
+directly in the parent window instead of spawning a Coder subagent. Trade-off: no
+separate `model:` audit entry for that change — note it in `plan.md`'s Task row instead
+of a standalone `report.md`.
+
+## E — Scope of the ceremony
+
+- **Task cap.** An Epic plans **6–8 Tasks**. If decomposition needs more, split into two
+  Epics — a wider Epic degrades planning quality more than it saves ceremony.
+- **Outside an Epic.** Typos, documentation, config tweaks and similar changes the Human
+  asks for directly are **not** Tasks: no `spec.md`, no `report.md`, no Reviewer. They
+  follow `020-git.mdc` and the project's deterministic gate. Do not answer such a request
+  with `BLOCKED` because it lacks an Epic.

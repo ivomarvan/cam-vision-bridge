@@ -1,0 +1,141 @@
+---
+description: >-
+  Meta-rules for writing Cursor rules (.mdc) and skills (SKILL.md).
+  Apply these rules whenever creating or editing agent rules and skills.
+alwaysApply: false
+---
+
+# Meta-Rules: Writing Cursor Rules and Skills
+
+
+## Language and Communication
+
+
+- **Language of code and rules**: all text in `.mdc` files and `SKILL.md` is always in **technical English** — concise, clear, no filler.
+- **Communication language**: resolved per `000-communication-language.mdc` as `<communication-language>` (`<lang-code>`).
+- **Bilingual principle** (when `<lang-code>` ≠ `en`):
+  - Every `.mdc` file and `SKILL.md` contains **`<communication-language>` comments** faithfully mirroring the English text.
+  - English is the **sole source of truth**. English wins on conflict.
+  - Comments are prefixed `<!-- <lang-code>: ... -->` (or `# <lang-code>: ...` in YAML/code).
+  - The agent automatically keeps `<communication-language>` comments synchronized with the English text on every edit.
+  - If `<lang-code>` = `en`, omit communication-language comments.
+
+## `.mdc` File Structure
+
+
+```markdown
+---
+description: Brief rule description (1–2 sentences, English)
+globs: **/*.ts        # file pattern; omit if alwaysApply: true
+alwaysApply: false    # true = applies regardless of context
+---
+
+# Rule Title (English)
+<!-- <lang-code>: Název pravidla v <communication-language> -->
+
+## Section (English)
+<!-- <lang-code>: Sekce v <communication-language> -->
+
+- Bullet point in English.
+  <!-- <lang-code>: Bullet point v <communication-language>. -->
+```
+
+## Rule Writing Principles
+
+
+### Conciseness and Focus
+
+
+- One rule = **one concern** (one file = one topic).
+- **Line limit depends on activation type** (cost rationale below):
+  - `alwaysApply: true` → **strict 150 lines** — loaded on **every** AI call; every extra line costs tokens.
+  - `globs` / auto-attached → **250 lines** acceptable — loaded only when matching files are in context.
+  - Move anything longer to a skill's `reference.md`.
+  - Limits are measured on the **installed** form (bilingual comments stripped) — that
+    is what the agent loads; `scripts/check_installation.py` enforces them there.
+- No explaining the obvious — the agent is an expert.
+- Use **❌ / ✅ code examples** instead of vague instructions.
+
+### Activation Type (choose deliberately)
+
+
+| Type | When to use |
+|------|------------|
+| `alwaysApply: true` | Global conventions always active (language, git, workflow) |
+| `globs: **/*.py` | File-type-specific rules — saves context window |
+| `description` without globs | Agent-requested: AI determines relevance |
+| `@mention` in chat | Manual activation — only when explicitly invoked |
+
+Prefer **auto-attached** rules via `globs` over `alwaysApply: true` — saves context window.
+
+### Security Boundaries (2026 agentic engineering)
+
+
+- Every workflow rules file **must** contain a guard against autonomous destructive actions.
+- Mandatory in workflow rules:
+  - No `git commit/push` without explicit user consent.
+  - No deletion of config files without confirmation.
+  - No pipeline/DB operations without approval.
+
+### File Naming
+
+Filename prefix groups rules by concern, in **steps of ten** (mirrors the Epic/Task
+numbering in `070-project-management.mdc`) — insert a new rule between two existing
+numbers instead of renumbering everything. The number is a grouping label, not a load
+priority: `alwaysApply` rules are all loaded together regardless of order, and
+`globs`/`description` rules attach independently per match.
+
+Template rules use `000`–`2xx`. **`9xx-<slug>.mdc` is reserved for project-owned rules**
+in a consuming project — they survive template re-install (`200-project-design-rules.mdc`).
+
+```
+000-communication-language.mdc   # source of truth for language — always first
+000-meta-rules-and-skills.mdc
+010-general-programming.mdc
+020-git.mdc
+100-python.mdc
+110-typescript.mdc
+200-docker.mdc
+```
+
+## SKILL.md Structure
+
+
+```markdown
+---
+name: skill-name              # max 64 chars, kebab-case
+description: >-
+  What this skill does.       # max 1024 chars — critical for AI discovery!
+  Use when: <trigger phrase>. # explicitly state when to use this skill.
+---
+
+# Skill Title (English)
+<!-- <lang-code>: Název dovednosti v <communication-language> -->
+
+## Prerequisites (English)
+<!-- <lang-code>: Předpoklady v <communication-language> -->
+
+## Steps (English)
+<!-- <lang-code>: Kroky v <communication-language> -->
+
+## Additional resources
+- [reference.md](reference.md)
+```
+
+### Rules for Skills
+
+
+- `description` is critical: the agent finds a skill only if the description contains keywords from the request.
+- `SKILL.md` max **500 lines**; move the rest to `reference.md` or `examples.md`.
+- One skill = one workflow. Prefer multiple focused skills over one "mega-skill".
+- If the skill calls commands, provide **exact commands** with expected output.
+
+## Pre-save Checklist
+
+
+- [ ] `.mdc` file is in `.cursor/rules/` with correct frontmatter
+- [ ] `globs` or `alwaysApply` is set deliberately
+- [ ] Length: under **150 lines** for `alwaysApply: true`; under **250 lines** for `globs` rules; under **500 lines** for skills
+- [ ] Contains concrete examples (❌ / ✅) or commands
+- [ ] `<communication-language>` comments synchronized with English text
+- [ ] No vague instructions — only concrete, actionable rules

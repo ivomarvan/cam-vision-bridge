@@ -1,0 +1,226 @@
+---
+description: >-
+  Modern PHP (8.4+) standards — strict types, PER Coding Style, PSR interfaces, PHPStan,
+  PHPUnit, Composer, security (PDO, escaping, passwords). Activated for PHP sources and
+  Composer/QA config files.
+globs: "**/*.php, **/composer.json, **/phpunit.xml*, **/phpstan.neon*, **/.php-cs-fixer*.php, **/rector.php"
+alwaysApply: false
+---
+
+# PHP — Coding Standards
+
+
+## Tooling and Target Version
+
+
+- Target: **PHP 8.4+** for new projects. The actual version is **always authoritative from
+  `require.php` in `composer.json`** — never use a feature newer than that constraint.
+- Code style: **PER Coding Style** (successor of PSR-12) via **PHP-CS-Fixer** (`@PER-CS`).
+- Static analysis: **PHPStan level `max`** (+ `phpstan-strict-rules`) — must pass in the gate;
+  a baseline file is allowed only for legacy code and may only shrink.
+- Tests: **PHPUnit 11+** with attributes (`#[Test]`, `#[DataProvider]`), not docblock annotations.
+- Automated upgrades/refactoring: **Rector** (run as dry-run in review, never blind).
+- Dependencies: **Composer**, PSR-4 autoloading, `composer.lock` **committed**.
+- Framework conventions (Symfony, Laravel) win where they conflict with this rule.
+- Commands and the `make check` gate: `skills/php-dev/SKILL.md`.
+
+## File Basics
+
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Billing\Invoice;
+
+use App\Billing\Money;
+use Psr\Log\LoggerInterface;
+
+final class InvoiceCalculator
+{
+    // ...
+}
+```
+
+- **`declare(strict_types=1);` in every file** — no silent scalar coercion.
+- One class/interface/enum per file; namespace mirrors the directory (PSR-4: `App\` → `src/`).
+- Pure PHP files omit the closing `?>` tag.
+- Naming: `PascalCase` classes, `camelCase` methods/properties/variables,
+  `SCREAMING_SNAKE_CASE` constants; enum cases `PascalCase`.
+
+## Types — Mandatory
+
+
+- Native types on **every** parameter, return value, property, and class constant;
+  `void`/`never` where applicable. `mixed` only at untrusted boundaries, narrowed immediately.
+- PHPDoc adds only what native types cannot express — generics and shapes for PHPStan:
+
+```php
+// ❌ Untyped, array of unknown content
+function totals($orders) { ... }
+
+// ✅ Native types + PHPStan generics for array content
+/**
+ * @param list<Order> $orders
+ * @return array<string, Money> Totals keyed by currency code.
+ */
+function totalsByCurrency(array $orders): array { ... }
+```
+
+- Prefer **value objects / DTOs** over associative arrays for structured data.
+
+## Modern Language Features
+
+
+```php
+// Pattern: Value Object — immutable, validated on construction
+final readonly class EmailAddress
+{
+    public function __construct(public string $value)
+    {
+        if (filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
+            throw new InvalidEmailAddress($value);
+        }
+    }
+}
+
+enum OrderStatus: string
+{
+    case Draft = 'draft';
+    case Paid = 'paid';
+
+    public function isFinal(): bool
+    {
+        return match ($this) {
+            self::Paid => true,
+            self::Draft => false,
+        };
+    }
+}
+```
+
+- Classes are **`final` by default** (composition over inheritance); `readonly` classes
+  for value objects and DTOs; constructor property promotion.
+- **Enums** instead of class constants or magic strings for closed sets of values.
+- `match` instead of `switch` (strict comparison, exhaustive — throws `UnhandledMatchError`).
+- `#[\Override]` on every method that overrides a parent/interface method.
+- PHP 8.4: asymmetric visibility (`public private(set)`) and property hooks instead of
+  boilerplate getters/setters — only if `require.php` allows it.
+- Named arguments for boolean flags and long optional parameter lists.
+- Strict comparison only (`===`); `in_array(..., strict: true)`; no `empty()` on values
+  where `0`/`"0"` is valid.
+
+## Architecture and PSR Interfaces
+
+
+- Depend on interfaces, inject via constructor; wire with a **PSR-11** container — no
+  service locator, no `new` of services inside business logic, no static facades in domain code.
+- HTTP layer: **PSR-7/15/17** (or the framework's equivalent); logging: **PSR-3**;
+  clock: **PSR-20** `ClockInterface` (no `new DateTime()` in logic — untestable).
+- Dates: `DateTimeImmutable` only, explicit time zone; money: integer minor units or a
+  money library — never `float`.
+- No global state: no `global`, no mutable static properties, no superglobals
+  (`$_GET`, `$_POST`) outside the HTTP adapter.
+
+## Errors and Logging
+
+
+```php
+// ✅ Specific exception, context, chained original (`previous`)
+try {
+    $response = $this->httpClient->sendRequest($request);
+} catch (ClientExceptionInterface $e) {
+    $this->logger->warning('Fetch failed', ['url' => $url, 'attempt' => $attempt]);
+    throw new DocumentFetchFailed($url, previous: $e);
+}
+```
+
+- Domain exceptions extend SPL exceptions (`RuntimeException`, `InvalidArgumentException`)
+  and are named by what went wrong (`DocumentFetchFailed`), not `...Exception` noise.
+- **Never the `@` error-suppression operator.** Warnings are converted to exceptions
+  (framework error handler or `set_error_handler` → `ErrorException`).
+- Production: `display_errors=0`, `log_errors=1`, `error_reporting=E_ALL`.
+- Logging via PSR-3 (Monolog) with a **context array** — never interpolate data into the message.
+
+## Security
+
+
+```php
+// ❌ SQL injection
+$pdo->query("SELECT * FROM users WHERE email = '$email'");
+
+// ✅ Prepared statement, bound parameter
+$stmt = $pdo->prepare('SELECT id, name FROM users WHERE email = :email');
+$stmt->execute(['email' => $email]);
+```
+
+- Database: PDO / Doctrine DBAL with **prepared statements only**; PDO with
+  `ERRMODE_EXCEPTION` and `EMULATE_PREPARES => false`. Identifiers (column/table names)
+  from an allow-list, never from input.
+- Output escaping: template engine auto-escaping (Twig/Blade); raw PHP output via
+  `htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')`.
+- Passwords: `password_hash($pw, PASSWORD_DEFAULT)` / `password_verify()` + `password_needs_rehash()`
+  — never `md5`/`sha1`/custom hashing.
+- Tokens and secrets: `random_bytes()` / `random_int()`; compare with `hash_equals()`.
+- **Never** `eval()`, `extract()`, `unserialize()` of untrusted data (use JSON with
+  `JSON_THROW_ON_ERROR`), or shell calls with unescaped input (`escapeshellarg`, or better
+  Symfony Process with an argument array).
+- File uploads: validate size and MIME by content (`finfo`), generate the stored file name,
+  store outside the web root.
+- Sessions: `session_regenerate_id(true)` after login; cookies `Secure`, `HttpOnly`,
+  `SameSite=Lax`; CSRF token on every state-changing request.
+- `composer audit` runs in CI (`make audit` — separate from `make check`, advisories change
+  without code changes); production install: `composer install --no-dev --classmap-authoritative`.
+
+## Documentation
+
+
+- PHPDoc on every public class and method (`010` Doxygen level): summary, `@param` /
+  `@return` meaning (types only when more precise than the native ones), `@throws`.
+
+## Testing
+
+
+```php
+#[CoversClass(TextChunker::class)]
+final class TextChunkerTest extends TestCase
+{
+    #[Test]
+    public function chunkWithEmptyInputReturnsEmptyList(): void
+    {
+        self::assertSame([], (new TextChunker())->chunk(''));
+    }
+
+    #[Test]
+    #[DataProvider('invalidLimits')]
+    public function chunkWithMaxTokensNotAboveOverlapThrows(int $maxTokens, int $overlap): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new TextChunker())->chunk('hello', $maxTokens, $overlap);
+    }
+
+    /** @return iterable<string, array{int, int}> */
+    public static function invalidLimits(): iterable
+    {
+        yield 'equal' => [10, 10];
+        yield 'below' => [5, 10];
+    }
+}
+```
+
+- `tests/` mirrors `src/` (PSR-4 `App\Tests\` → `tests/`, in `autoload-dev`).
+- Method name = `<what>With<condition><expected result>` (mirrors `010`).
+- Test doubles for interfaces you own; never mock what you do not own (wrap it first).
+
+## .gitignore — PHP-Specific Entries
+
+
+```gitignore
+/vendor/
+.phpunit.cache/
+.php-cs-fixer.cache
+/var/cache/
+/var/log/
+coverage/
+```

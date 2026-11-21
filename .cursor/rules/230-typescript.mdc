@@ -1,0 +1,175 @@
+---
+description: >-
+  TypeScript type-system standards — strict tsconfig, no any, unions over enums, runtime
+  validation at boundaries, typed errors, TSDoc. Runtime/async/security rules shared
+  with JavaScript live in 220-javascript.mdc.
+globs: "**/*.ts, **/*.mts, **/*.cts, **/*.tsx, **/tsconfig*.json"
+alwaysApply: false
+---
+
+# TypeScript — Type-System Standards
+
+
+Builds on `220-javascript.mdc` (modules, async, errors, security, testing) — both apply to `.ts` files.
+
+## Compiler Configuration
+
+
+- TypeScript version is authoritative from `package.json`; type-check with `tsc --noEmit`
+  (`vue-tsc --noEmit` for Vue) — must pass in the `make check` gate.
+
+```jsonc
+// tsconfig.json — baseline; never weaken these flags to silence an error
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "nodenext",               // Node.js; bundler apps: "preserve" + "moduleResolution": "bundler"
+    "strict": true,
+    "noUncheckedIndexedAccess": true,   // arr[i] is T | undefined
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,       // forces `import type`
+    "erasableSyntaxOnly": true,         // no enum/namespace/parameter properties
+    "isolatedModules": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+- `// @ts-ignore` is forbidden; `// @ts-expect-error <reason>` only with a reason and a
+  linked issue.
+- Lint with **typescript-eslint** `strictTypeChecked` + `stylisticTypeChecked` presets.
+
+## No `any`, No Lies
+
+
+```ts
+// ❌ any disables checking; `as` and `!` assert without proof
+function parse(raw: any) { return raw as User; }
+const name = users.find((u) => u.id === id)!.name;
+
+// ✅ unknown + narrowing; absence handled explicitly
+function isUser(value: unknown): value is User {
+  return typeof value === 'object' && value !== null && 'id' in value;
+}
+const user = users.find((u) => u.id === id);
+if (user === undefined) throw new NotFoundError(`User not found: id=${id}`);
+```
+
+- **No `any`** (explicit or implicit) — use `unknown` and narrow. Third-party `any` is
+  wrapped and typed at the import boundary.
+- No non-null assertions `!`; `as` casts only right after runtime validation or for `as const`.
+- Prefer `satisfies` over annotation when you need both checking and the narrow inferred type.
+- Avoid `Function`, `Object`, `{}`, `object` — write the real shape or signature.
+- Explicit return types on exported functions (public contract, faster type-checking).
+
+## Modelling Types
+
+
+```ts
+// ❌ enum — not erasable, emits runtime code, numeric enums accept any number
+enum Status { Draft, Published }
+
+// ✅ const object + derived union type
+export const STATUS = { draft: 'draft', published: 'published' } as const;
+export type Status = (typeof STATUS)[keyof typeof STATUS];
+
+// ✅ Discriminated union + exhaustive check
+type FetchResult =
+  | { kind: 'ok'; data: Document }
+  | { kind: 'notFound' }
+  | { kind: 'error'; error: Error };
+
+function describe(result: FetchResult): string {
+  switch (result.kind) {
+    case 'ok': return result.data.title;
+    case 'notFound': return 'Not found';
+    case 'error': return result.error.message;
+    default: {
+      const unreachable: never = result;   // compile error when a variant is added
+      throw new Error(`Unhandled result: ${JSON.stringify(unreachable)}`);
+    }
+  }
+}
+```
+
+- `interface` for object contracts that are implemented or extended; `type` for unions,
+  intersections, mapped and utility types.
+- Model states as **discriminated unions**, not as bags of optional flags
+  (`isLoading?`, `error?`, `data?`) — make impossible states unrepresentable.
+- **Immutability**: `readonly` properties, `ReadonlyArray<T>` / `readonly T[]` parameters,
+  `as const` for literal tables.
+- **Branded types** for IDs and validated values that must not be mixed up:
+
+```ts
+type UserId = string & { readonly __brand: 'UserId' };
+type OrderId = string & { readonly __brand: 'OrderId' };
+declare function cancelOrder(orderId: OrderId, by: UserId): Promise<void>;  // swapped args = compile error
+```
+
+- Generics: constrain them (`<T extends Entity>`), name them meaningfully when more than
+  one (`TKey`, `TValue`); no generic that is used only once.
+
+## Validation at Boundaries
+
+
+Static types vanish at runtime. Everything entering the program (HTTP bodies, API
+responses, `process.env`, files, `localStorage`, `postMessage`) is `unknown` until a
+schema validated it. Derive the type **from** the schema — one source of truth.
+
+```ts
+import { z } from 'zod';
+
+export const EnvSchema = z.object({
+  DATABASE_URL: z.url(),
+  PORT: z.coerce.number().int().positive().default(3000),
+});
+export type Env = z.infer<typeof EnvSchema>;
+
+export const env: Env = EnvSchema.parse(process.env);   // fail fast at startup
+```
+
+## Errors
+
+
+- `catch (error)` is `unknown` (`useUnknownInCatchVariables` via `strict`) — narrow with
+  `instanceof` before use; never annotate it as `any`.
+- Error subclasses declare `override name`; expected, recoverable failures in domain
+  logic may be returned as a discriminated union (`Result`-style) instead of thrown.
+
+```ts
+export class NotFoundError extends Error {
+  override name = 'NotFoundError';
+}
+```
+
+## Classes and Dependency Injection
+
+
+- Depend on interfaces, inject via constructor (DIP); explicit fields instead of parameter
+  properties (`erasableSyntaxOnly`); `#private` for runtime privacy.
+
+```ts
+// Pattern: Repository + Dependency Injection (DIP)
+export interface DocumentRepository {
+  findById(id: DocumentId): Promise<Document | undefined>;
+}
+
+export class DocumentService {
+  readonly #repo: DocumentRepository;
+
+  constructor(repo: DocumentRepository) {
+    this.#repo = repo;   // injected — replaced by an in-memory fake in tests
+  }
+}
+```
+
+## Imports and Documentation
+
+
+- Type-only imports use `import type { User } from './user.js'` (`verbatimModuleSyntax`).
+- Path aliases (`@/…`) must be configured identically in `tsconfig.json` and the bundler/test runner.
+- TSDoc on every export: semantics only (`@param name - meaning`, `@returns`, `@throws`) —
+  never repeat types already in the signature.

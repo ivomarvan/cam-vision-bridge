@@ -1,0 +1,157 @@
+---
+name: review-epic
+description: >-
+  APM Phase ER — Close an Epic: Coder aggregates Task Reports into Epic Report,
+  then Planner consults Human on Roadmap validity. Use when: all Tasks of an Epic
+  are completed and approved, and it's time to write the Epic Report and review
+  whether the Roadmap needs updating before proceeding to the next Epic.
+---
+
+# Skill: APM Epic Review and Closure (Phase ER)
+
+## Prerequisites
+
+- All Tasks of the current Epic are **Reviewer-approved** (`review.md` = APPROVE); `high`
+  and escalated Tasks are additionally Human-approved [Phase R, FT.7] — `medium`/`low`
+  Tasks are not gated per Task (see `090-apm-orchestration.mdc`) and appear here for the
+  first time.
+- All `task-NNN/report.md` and `task-NNN/review.md` files exist.
+- You switch roles: **Coder** writes Epic Report → **Planner** leads Roadmap review.
+
+
+## Part A — Epic Report (Coder) [FER.1]
+
+### Step A1 — Read all Task Reports
+
+Read every `task-NNN-name/report.md` in the Epic directory.
+Identify: key decisions, patterns, problems encountered, notable outcomes.
+
+### Step A2 — Write Epic Report
+
+Create `epic-NNN-name/report.md`:
+
+```yaml
+---
+apm_category: epic-report
+apm_ref: E010
+apm_level: epic
+created_by: Coder
+model: <model-name>
+template_version: <from .cursor/TEMPLATE_VERSION>
+intended_for: Human, Planner
+created_at: <YYYY-MM-DD>
+updated_at: <YYYY-MM-DD>
+---
+```
+
+Report language: **`<communication-language>`** (from `000-communication-language.mdc`).
+
+Required sections:
+```markdown
+# Epic Report: E010 — <Epic Name>
+
+## Shrnutí epiky
+Co bylo v rámci epiky implementováno — 1 odstavec.
+
+## Dokončené tasky
+| Task | Název | Pásmo | Human brána po tasku | Kola revize | BLOCKED | Výsledek |
+|------|-------|-------|----------------------|-------------|---------|---------|
+| T010 | Create database schema | low | ne | 0 | 0 | ✅ |
+| T020 | Configure Docker services | high | ano [FT.7] | 2 | 1 | ✅ |
+
+The "Human brána po tasku" column is what makes `medium`/`low` Tasks visible to Human for
+the first time here — they were never gated individually. "Kola revize" = number of
+`REQUEST CHANGES` verdicts before APPROVE; "BLOCKED" = number of subagent `BLOCKED:`
+returns. Both come from `review.md` / the Planner's notes in `plan.md` and are the cheap
+signal of where spec quality (DoR) was weak — put a one-line cause under *Doporučení pro
+Planner* for any Task with ≥ 2 in either column.
+
+## Klíčová rozhodnutí a poznatky
+- Rozhodnutí učiněná v průběhu epiky, která ovlivňují další vývoj.
+- Problémy, na které jsme narazili, a jak jsme je vyřešili.
+
+## Odchylky od Epic Planu
+Co bylo jinak než plánováno? Proč? Jaký mělo dopad?
+
+## Doporučení pro Planner
+Poznatky z implementace relevantní pro plánování dalších Epik.
+(Rizika, technický dluh, přidané závislosti, potřebné refaktory.)
+
+## Využití tokenů (vyplní Human)
+Planner: ~<počet> · Coder: ~<počet> · Reviewer: ~<počet> — opsáno z UI Cursoru.
+Nepovinné pole — agent nemá spolehlivou introspekci vlastní spotřeby tokenů za celou
+session, proto ho nevyplňuje sám; ponech `—`, pokud to Human nedoplní.
+
+## Reference
+- Epic Plan: [plan.md](plan.md)
+- Task Reports: [T010](task-010-name/report.md), [T020](task-020-name/report.md)
+```
+
+The **"Využití tokenů"** section is Human-filled, not Coder-filled — an agent cannot
+reliably introspect its own session token usage; only Cursor's UI shows real counts. The
+Coder leaves it as `—` when writing the Epic Report; do not guess or estimate a number.
+
+## Part B — Roadmap Review (Planner + Human) [FER.2]
+
+### Step B1 — Planner reads Epic Report and current Roadmap
+
+Read:
+- `epic-NNN/report.md` (just written)
+- `doc/project-progress/roadmap.md`
+- `doc/project-progress/spec.md` (project goals — unchanged reference)
+
+### Step B2 — Planner assesses Roadmap validity
+
+Ask: given what we learned in this Epic, are the upcoming Epics still correct?
+- Were assumptions in the spec invalidated?
+- Did new dependencies or risks emerge?
+- Is any planned Epic now unnecessary? Is a new Epic needed?
+
+**ADR + spec reconciliation:** verify that any architectural decision made during the Epic
+is captured as an ADR in `doc/architecture/decisions/` and is consistent with `spec.md`.
+If implementation invalidated part of the spec, propose a spec update to the Human (the
+spec is the single source of truth and must not silently rot).
+
+### Step B3 — Present assessment to Human
+
+Open with the **Human Gate Briefing** (`090-apm-orchestration.mdc`): where the project
+stands, what changed in this Epic, and the concrete decision needed — then state one of
+three conclusions as the "Decision needed":
+
+**A) Roadmap unchanged** — "Epics E020–E050 remain valid. Proceed to E020."
+
+**B) Update needed** — Propose specific changes to `roadmap.md`:
+```markdown
+Proposed change: Insert E015 — Refactor auth layer
+Reason: T030 revealed that the current auth interface won't scale to E020 requirements.
+```
+
+**C) Major revision** — Significant scope or architecture change; discuss with Human before writing.
+
+### Step B4 — Update roadmap.md if approved
+
+If Human approves changes: update `roadmap.md` front matter `updated_at` and content.
+Inserting between E010 and E020: use `E015-name`.
+
+## Human Review Checklist [FT.7 for Epic]
+
+Human should verify before approving Epic closure:
+- [ ] All Task `dod.md` files are fully ✅?
+- [ ] All Task `review.md` verdicts are APPROVE?
+- [ ] Epic Report accurately reflects what was built?
+- [ ] Architectural decisions captured as ADRs and consistent with `spec.md`?
+- [ ] Roadmap is still valid or updated with justified changes?
+- [ ] No regressions in full test suite?
+
+## Output Checklist
+
+- [ ] `epic-NNN/report.md` — all required sections, in `<communication-language>` [FER.1]
+- [ ] "Využití tokenů" left as `—` unless Human already filled it in (Coder never estimates)
+- [ ] Roadmap reviewed with Human [FER.2]
+- [ ] `roadmap.md` updated if needed (with updated_at)
+- [ ] Human has confirmed readiness to proceed to next Epic
+
+## Additional resources
+- [../../../rules/070-project-management.mdc](../../../rules/070-project-management.mdc)
+- [../../../rules/090-apm-orchestration.mdc](../../../rules/090-apm-orchestration.mdc)
+- [README.project_management.md](../../../README.project_management.md)

@@ -1,0 +1,194 @@
+---
+description: >-
+  Standard project directory structure — source code, documentation, experiments,
+  local data, and web app layout. Apply when creating new projects or directories.
+alwaysApply: false
+---
+
+# Project Directory Structure
+
+
+## Universal top-level directories
+
+
+```
+project-root/
+├── .cursor/            # Cursor IDE rules and skills — always committed
+├── src/                # All production source code (see layout variants below)
+├── tests/              # Tests — mirrors src/ structure (see language-specific rules)
+├── doc/                # Project documentation (see structure below)
+├── experiments/        # Technology spikes and exploratory code — committed, not production
+├── nogit_data/         # Local runtime data — NEVER committed (.gitignore)
+├── docker-compose.yml  # Infrastructure services
+├── .env.example        # Documented env variables template — always committed
+├── README.md           # Project overview, quick start
+└── README.docker.md    # Docker usage (required when Docker is used)
+```
+
+
+## `src/` layout variants
+
+
+### Single-language project (most common)
+
+
+No language subdirectory — source directly in `src/`:
+
+```
+src/
+├── module_a/
+│   ├── entity_one.py
+│   └── sub_module/
+├── module_b/
+└── common/
+```
+
+### Multi-language project (e.g. Python + C/C++)
+
+
+Language subdirectory at second level:
+
+```
+src/
+├── py/
+│   ├── scraping/
+│   │   ├── fetcher.py
+│   │   └── parser.py
+│   └── ingestion/
+├── cpp/
+│   ├── wifi_manager/
+│   │   ├── include/
+│   │   └── wifi_manager.c
+│   └── sensor_driver/
+└── shared/             # Language-agnostic: configs, schemas, proto files
+```
+
+### Web application (backend + frontend)
+
+
+Separate top-level directories — different toolchains, dependencies, and Docker images:
+
+```
+project-root/
+├── backend/            # or: api/
+│   ├── src/
+│   ├── tests/
+│   ├── Dockerfile
+│   └── README.md
+├── frontend/           # or: web/
+│   ├── src/
+│   ├── tests/
+│   ├── Dockerfile
+│   └── README.md
+├── docker-compose.yml  # Orchestrates both services + infrastructure
+└── README.md
+```
+
+Do **not** use `src/backend/` and `src/frontend/` — it implies a single unified build
+that does not reflect reality.
+
+A FastAPI backend (single-service or split) belongs under `backend/` or `api/` — this
+is also the path `140-fastapi.mdc`'s `globs` expects, so following it makes that rule
+auto-attach instead of relying on agent judgment alone.
+
+## `tests/` placement
+
+
+- **Preferred**: `tests/` at project root, mirroring `src/` structure.
+- **Exception**: language-specific conventions may override (e.g. Vue colocates `*.test.ts`
+  next to components). See the respective language rule.
+
+## `doc/` structure
+
+
+```
+doc/
+├── architecture/               # System design: component diagrams, data models, flows
+│   └── decisions/              # ADR-NNN-title.md — Architecture Decision Records
+├── guides/                     # How-to guides, operational runbooks, onboarding
+├── api/                        # API docs (OpenAPI specs, request/response examples)
+├── external/                   # External: downloaded specs, standards, vendor docs
+│                               # Files here are references only — not our work
+└── project-progress/           # APM artifacts — see 070-project-management.mdc
+                                # brief, spec, roadmap, epic plans, task specs, reports
+```
+
+
+### Architecture Decision Records (ADR)
+
+
+Use ADRs to capture **why** a significant technical decision was made.
+Filename: `ADR-NNN-short-title.md` (e.g. `ADR-001-use-postgresql-not-sqlite.md`)
+
+```markdown
+# ADR-001: Use PostgreSQL instead of SQLite
+
+**Status**: Accepted
+**Date**: 2026-05-07
+
+## Context
+Multi-user access and concurrent writes required; SQLite has write-lock limitations.
+
+## Decision
+Use PostgreSQL 16 via Docker Compose for all environments.
+
+## Consequences
++ Concurrent writes, full SQL feature set, production parity.
+- Requires Docker for local development (acceptable per docker policy).
+```
+
+### `external/` convention
+
+
+Files in `external/` are **read-only references** — never modify them directly.
+Add a `README.md` inside listing source URLs and download dates.
+
+## `experiments/` convention
+
+
+- Committed code **not part of the production build** — technology spikes, proofs of concept.
+- Each experiment: own subdirectory + `README.md` (goal, outcome, decision).
+- Name by date + topic: `2026-05-qdrant-hybrid-search/`.
+- When promoted to production: move to `src/`, remove from `experiments/`.
+
+## `nogit_data/` convention
+
+
+- Local runtime outputs: logs, downloaded data, intermediate results. **Never committed.**
+- Must be in `.gitignore`. Subdirectory mirrors the generating script/module:
+
+```
+nogit_data/log/<module>/<script>/<YYMMDD>/<HHMMSS>.log.txt
+```
+
+## `.gitignore` — generic base (always commit)
+
+
+Start from this base and extend with language-specific entries (see the respective
+language rule). Git conventions themselves live in `020-git.mdc`.
+
+```gitignore
+# Secrets and environment
+.env
+.env.*
+!.env.example
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Personal convention — local data never committed
+nogit_data/
+
+# Generic logs and temp files
+*.log
+*.tmp
+```

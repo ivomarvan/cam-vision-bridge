@@ -1,0 +1,24 @@
+# Versions verified on PyPI on 2026-11-21 (latest stable at implementation time).
+# Direct spike dependencies only; transitive packages are installed by pip.
+
+aiortc==1.16.0
+# WebRTC answerer: RTCPeerConnection and DataChannel. aiortc gathers ICE
+# candidates inside setLocalDescription, so this peer does not send CANDIDATE.
+
+websockets==17.4
+# PeerJS signaling client (wss to the public cloud). No other HTTP stack.
+
+opencv-python-headless==5.1.0.95
+# JPEG decode via cv2.imdecode. Headless build avoids GUI libraries on a PC peer.
+
+numpy==2.5.5
+# Wraps JPEG bytes for cv2.imdecode. Also the array library OpenCV 5.1 expects.
+
+qrcode==8.2
+# Renders the measurement-page URL as an ASCII QR code in the terminal.
+
+pytest==9.2.0
+# Unit and in-process integration tests (markers unit / integration).
+
+ruff==0.17.6
+# Linter and formatter. The spike gate is ruff check plus ruff format --check.

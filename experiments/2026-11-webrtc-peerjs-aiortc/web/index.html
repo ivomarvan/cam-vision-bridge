@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CAM-VISION-BRIDGE WebRTC spike</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.4;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 720px;
+        padding: 12px 14px 32px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 8px;
+      }
+      .panel {
+        border: 1px solid #8884;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin: 10px 0;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        font-size: 0.95rem;
+      }
+      .status-grid dt {
+        margin: 0;
+        opacity: 0.75;
+      }
+      .status-grid dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      button {
+        font-size: 1rem;
+        padding: 10px 14px;
+        margin: 4px 8px 4px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #8884;
+        padding: 4px 6px;
+        text-align: left;
+        vertical-align: top;
+      }
+      tr.row-error {
+        background: #f4433644;
+      }
+      #error-log {
+        font-family: ui-monospace, monospace;
+        font-size: 0.78rem;
+        max-height: 140px;
+        overflow-y: auto;
+        border: 1px solid #8884;
+        padding: 6px;
+        border-radius: 6px;
+      }
+      .log-line {
+        margin-bottom: 4px;
+      }
+      label {
+        display: block;
+        margin: 6px 0 2px;
+      }
+      input,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px;
+        font-size: 1rem;
+      }
+      .note {
+        font-size: 0.85rem;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebRTC JPEG spike (PeerJS → aiortc)</h1>
+    <p class="note">
+      Open with <code>#peer=&lt;python-id&gt;</code> and optional
+      <code>duration</code>, <code>host</code>, <code>port</code>, <code>path</code>,
+      <code>key</code>.
+    </p>
+
+    <section class="panel">
+      <dl class="status-grid">
+        <dt>Signaling</dt>
+        <dd id="signaling-state">—</dd>
+        <dt>DataChannel</dt>
+        <dd id="connection-state">—</dd>
+        <dt>ICE (local/remote proto)</dt>
+        <dd id="ice-state">—</dd>
+        <dt>Live FPS</dt>
+        <dd id="fps-live">0</dd>
+        <dt>RTT median (ms)</dt>
+        <dd id="rtt-median">0</dd>
+        <dt>Frames</dt>
+        <dd id="frame-counters">sent 0 / echoed 0</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <button type="button" id="btn-matrix">Run matrix</button>
+      <button type="button" id="btn-single">Single run</button>
+    </section>
+
+    <section class="panel">
+      <h2 style="font-size: 1rem; margin: 0 0 8px">Single run</h2>
+      <label for="form-mode">Mode</label>
+      <select id="form-mode">
+        <option value="synthetic" selected>synthetic</option>
+        <option value="camera" id="mode-camera">camera</option>
+      </select>
+      <p id="camera-note" class="note"></p>
+      <label for="form-quality">JPEG quality</label>
+      <input id="form-quality" type="number" min="0.1" max="1" step="0.1" value="0.8" />
+      <label for="form-in-flight">in_flight</label>
+      <input id="form-in-flight" type="number" min="1" max="8" value="1" />
+      <label for="form-chunk-bytes">chunk_bytes (0 = no split)</label>
+      <input id="form-chunk-bytes" type="number" min="0" step="1" value="16384" />
+    </section>
+
+    <section class="panel">
+      <h2 style="font-size: 1rem; margin: 0 0 8px">Run summary</h2>
+      <table id="summary-table">
+        <thead>
+          <tr>
+            <th>run_id</th>
+            <th>mode</th>
+            <th>Q</th>
+            <th>in</th>
+            <th>chunk</th>
+            <th>sent</th>
+            <th>echo</th>
+            <th>med RTT</th>
+            <th>conn ms</th>
+            <th>ICE</th>
+            <th>status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2 style="font-size: 1rem; margin: 0 0 8px">Errors</h2>
+      <div id="error-log"></div>
+    </section>
+
+    <script type="module" src="./spike.js"></script>
+  </body>
+</html>

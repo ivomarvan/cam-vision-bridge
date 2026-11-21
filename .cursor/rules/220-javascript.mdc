@@ -1,0 +1,173 @@
+---
+description: >-
+  JavaScript (ECMAScript 2024+) standards for browser and Node.js — ES modules, async,
+  error handling, security, tooling, testing. Also applies to TypeScript files (runtime
+  semantics); type-system rules live in 230-typescript.mdc.
+globs: "**/*.js, **/*.mjs, **/*.cjs, **/*.jsx, **/*.ts, **/*.mts, **/*.cts, **/*.tsx, **/package.json, **/eslint.config.*"
+alwaysApply: false
+---
+
+# JavaScript — Coding Standards
+
+
+## Tooling and Target Version
+
+
+- Language level: **ES2024+**; Node.js: current **Active LTS**. The actual versions are
+  authoritative from `engines.node` in `package.json` (+ `.nvmrc`) and the bundler target.
+- New code is **TypeScript** (`230-typescript.mdc`). Plain JS only for config files and
+  small scripts — and then type-checked: `// @ts-check` + JSDoc types (`checkJs`).
+- Lint: **ESLint 9+ flat config** (`eslint.config.js`); format: **Prettier**. Biome is an
+  accepted single-tool alternative — one choice per project, never both.
+- Tests: **Vitest** (unit/integration), **Playwright** (E2E).
+- One package manager per project (npm by default); the lockfile is **always committed**;
+  CI and Docker install with `npm ci`, never `npm install`.
+- Commands and the `make check` gate: `skills/node-dev/SKILL.md`.
+
+## Modules and Declarations
+
+
+- **ES modules only** (`"type": "module"` in `package.json`); no CommonJS `require` in new code.
+- **Named exports**; no default exports (exception: files where a framework demands one,
+  e.g. `*.config.js`, Vue SFC).
+- Node built-ins with the `node:` prefix: `import { readFile } from 'node:fs/promises'`.
+- `const` by default, `let` only when reassigned, **never `var`**.
+- Strict equality `===` / `!==` only; `??` for defaults (not `||`, which swallows `0` and `""`);
+  `?.` for optional access.
+- Naming: `camelCase` variables/functions, `PascalCase` classes/types, `SCREAMING_SNAKE_CASE`
+  module-level constants, `kebab-case` file names (exception: component files per framework rule).
+
+## Immutability and Data
+
+
+```js
+// ❌ Mutates the caller's array
+function latest(items) { return items.sort(byDate).reverse()[0]; }
+
+// ✅ Non-mutating ES2023+ methods
+function latest(items) { return items.toSorted(byDate).at(-1); }
+
+const updated = { ...user, email };          // shallow copy with change
+const snapshot = structuredClone(state);     // deep copy — not JSON.parse(JSON.stringify())
+const byStatus = Object.groupBy(orders, (o) => o.status);
+```
+
+- Prefer `toSorted`/`toReversed`/`toSpliced`/`with`, spread, and `structuredClone` over mutation.
+- `Map`/`Set` for dynamic keys and lookups — not plain objects (prototype pollution, key coercion).
+- Encapsulate class state with private fields `#field`, not `_field` conventions.
+- Never extend built-in prototypes.
+
+## Async Code
+
+
+- `async`/`await` everywhere; no `.then()` chains, no callbacks in new code.
+- **No floating promises** — every promise is awaited, returned, or explicitly
+  `void`-ed with a comment (enforced by `@typescript-eslint/no-floating-promises`).
+- Independent I/O in parallel: `Promise.all` (fail fast) or `Promise.allSettled` (collect all).
+  Never `await` inside a loop over independent items.
+- Every network call has a timeout and is cancellable:
+
+```js
+const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+if (!response.ok) {
+  throw new HttpError(`GET ${url} failed`, { status: response.status });
+}
+```
+
+## Error Handling
+
+
+```js
+// ❌ Throws a string, loses the original error
+catch (e) { throw 'load failed'; }
+
+// ✅ Error subclass, original attached as `cause`
+export class ConfigLoadError extends Error {
+  name = 'ConfigLoadError';
+}
+
+try {
+  config = JSON.parse(await readFile(path, 'utf8'));
+} catch (error) {
+  throw new ConfigLoadError(`Cannot load config: path=${path}`, { cause: error });
+}
+```
+
+- Throw only `Error` instances (subclasses with a `name`); chain with `{ cause }`.
+- Node.js: register `process.on('unhandledRejection')` logging at the entry point; let the
+  process crash and be restarted rather than continue in an unknown state.
+
+## Logging
+
+
+- Node.js: structured JSON logger (**pino**) with context fields; no `console.log` in
+  committed code (exception: CLI user output).
+- Browser: a thin logger wrapper (levels, production silencing, error reporting) instead
+  of scattered `console.*` calls.
+
+```js
+logger.info({ url, sizeBytes: body.length }, 'document fetched');
+```
+
+## Security
+
+
+- **No `eval`, `new Function`, or string-based `setTimeout`.**
+- DOM: `textContent` for text; `innerHTML`/`insertAdjacentHTML` only with DOMPurify-sanitized
+  input. Never build HTML by string concatenation of user data.
+- Merging untrusted objects: reject `__proto__`/`constructor`/`prototype` keys, or use
+  `Object.create(null)` / `Map` (prototype pollution).
+- Randomness for IDs/tokens: `crypto.randomUUID()` / `crypto.getRandomValues()` — never `Math.random()`.
+- Browser storage (`localStorage`) never holds tokens or secrets — use `HttpOnly`, `Secure`,
+  `SameSite` cookies. Anything shipped to the browser is public.
+- Validate all external input (HTTP bodies, `process.env`, files) at the boundary with a
+  schema (Zod / Valibot) — see `230-typescript.mdc`.
+- **Supply chain**: exact versions (`save-exact=true` in `.npmrc`), review every new
+  package (maintainers, downloads, install scripts), `npm audit --omit=dev` in CI
+  (`make audit` — separate from `make check`, advisories change without code changes).
+
+## Documentation
+
+
+- Every exported function/class has a JSDoc/TSDoc block (`010` Doxygen level): summary,
+  `@param`, `@returns`, `@throws`, `@example` for non-trivial use.
+- In `.js` files JSDoc carries the types (`@param {string} url`); in `.ts` files types are
+  **never** repeated in comments.
+
+## Testing
+
+
+```js
+// src/text/chunk-text.test.ts — colocated with the unit under test
+import { describe, expect, it } from 'vitest';
+import { chunkText } from './chunk-text.js';
+
+describe('chunkText', () => {
+  it('returns an empty array for empty input', () => {
+    expect(chunkText('')).toEqual([]);
+  });
+
+  it('throws RangeError when maxTokens <= overlap', () => {
+    expect(() => chunkText('hello', { maxTokens: 10, overlap: 10 })).toThrow(RangeError);
+  });
+});
+```
+
+- Unit tests colocated as `*.test.ts`; E2E tests in `tests/e2e/` (Playwright).
+- Name = `describe(<unit>)` + `it(<condition> → <expected result>)` (mirrors `010`).
+- Mock the network with **MSW**, time with `vi.useFakeTimers()` — tests stay deterministic.
+- E2E selectors: `getByRole` / `getByLabel` first (also checks accessibility), `data-testid` last.
+
+## .gitignore — Node-Specific Entries
+
+
+```gitignore
+node_modules/
+dist/
+coverage/
+.vite/
+.eslintcache
+*.tsbuildinfo
+playwright-report/
+test-results/
+```

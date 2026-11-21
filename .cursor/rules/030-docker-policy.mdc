@@ -1,0 +1,83 @@
+---
+description: >-
+  Docker usage policy — when Docker is mandatory, when it is exempt, and how to
+  decide for new technologies. Always apply when starting or evaluating a project.
+alwaysApply: true
+---
+
+# Docker Usage Policy
+
+
+## Default Rule: Docker is Mandatory
+
+
+Every project with runtime dependencies or more than one service **must** be containerized.
+
+When Docker is used, the project **must** contain a `README.docker.md` file documenting:
+
+- how to start the environment (`docker compose up`)
+- what services are included and on which ports
+- common maintenance tasks (migrations, shell access, cleanup)
+
+## Docker Exclude List
+
+
+The following project types are **exempt** from the Docker requirement:
+
+
+| Project type | Reason |
+|--------------|--------|
+| **Embedded firmware** (ESP32, ESP-IDF, bare-metal) | USB flashing access is complex in containers; toolchain overhead (~2 GB); native environment preferred |
+| **Desktop GUI applications** (Qt, GTK, Electron) | X11/Wayland forwarding is fragile; native OS integration required |
+| **Simple utility scripts** (single file, ≤1 dependency) | Docker overhead exceeds the benefit; use a venv or conda environment |
+| **Documentation-only repositories** | No runtime environment needed |
+
+
+## Infrastructure vs. Application Containerization
+
+
+Even for exempt project types, **infrastructure services** (databases, queues, vector stores)
+**must** be run via Docker Compose.
+
+```yaml
+# ✅ Minimal compose — infrastructure only, application runs natively
+services:
+  db:
+    image: postgres:16.2-alpine
+  redis:
+    image: redis:7.2-alpine
+```
+
+Use compose `profiles` to make the application container opt-in when the native
+environment suffices (example in `040-docker-standards.mdc`).
+
+## Adding a New Technology
+
+
+When introducing a new technology, framework, or runtime dependency to the project,
+**carefully evaluate** one of these two paths before writing any code:
+
+1. **Containerize it** — add the service to `docker-compose.yml` with a pinned image version.
+2. **Exempt it** — record the exemption with a written justification in the project's
+   `DESIGN_RULES.user.md` (section *Docker exemptions*, see `200-project-design-rules.mdc`).
+   Never edit this rule inside a consuming project — it is template-owned and rewritten
+   on re-install. If the exemption is general, propose it for the Exclude List above.
+
+**Default is containerization.** Exemption requires an explicit reason.
+
+**Spike/exploratory exception**: code on a `spike/` branch or under `experiments/` (see
+`070-project-management.mdc` spike Epic type) may skip the mandatory `README.docker.md`
+and pinned-version ceremony while it stays a spike. Apply this policy in full the moment
+the work is promoted to production (`experiments/` convention, `060-project-structure.mdc`).
+
+## Disk Space — Avoiding Waste
+
+
+- Use **multi-stage builds** — production image contains no dev dependencies (see `040-docker-standards.mdc`).
+- Use **BuildKit** (`DOCKER_BUILDKIT=1`) — layer cache is shared across builds.
+- Add periodic cleanup to `README.docker.md`:
+
+```bash
+docker system prune -f    # remove unused images, containers, networks
+docker volume prune -f    # remove orphaned volumes
+```

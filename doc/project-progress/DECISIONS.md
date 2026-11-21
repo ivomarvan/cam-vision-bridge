@@ -1,0 +1,19 @@
+# Decisions Register
+
+<!-- Append-only. One row per settled question that could otherwise resurface or be
+     silently contradicted by a later chat instruction. This file — not the full spec,
+     roadmap, or brief — is the fast target every Phase checks a new instruction
+     against before starting (see rules/070-project-management.mdc, "Source of Truth").
+     Keep entries short; link to the report/ADR that has the detail, do not duplicate it
+     here. -->
+
+| # | Question | Decision | Date | Reference |
+|---|----------|----------|------|-----------|
+| 1 | Styl veřejného API adaptéru pro cizí Python projekt | Synchronní pull API: `for frame in cam.frames(): cam.publish(frame, results)` + pomocná `run(callback)`. Jádro bridge je interně asyncio, synchronní API je fasáda nad ním; asyncio API (`async for frame in cam`) lze přidat později jako další fasádu bez změny stávajícího API. | 2026-11-21 | brainstorming (Phase 0), `brief.md` |
+| 2 | Transport mezi mobilem a PC pro MVP | WebRTC jako v projektu Astriot: frontend hostovaný na GitHub Pages (platné HTTPS, žádné certifikáty v mobilu), Python peer přes `aiortc`, signalizace přes PeerJS (výchozí veřejný cloud, adresa konfigurovatelná). Transport je za rozhraním `Transport`, WebSocket lze přidat později. Vědomě přijatá rizika: nutný internet, závislost na PeerJS cloudu, překlad mDNS ICE kandidátů v `aioice`, nutný handshake s verzí protokolu (frontend a knihovna se nasazují zvlášť). | 2026-11-21 | brainstorming (Phase 0) |
+| 3 | Jak posílat snímky přes WebRTC | JPEG snímky přes WebRTC DataChannel, každý s `frame_id`; výsledky odkazují na `frame_id`. Snímky větší než limit zprávy (~64 KB v `aiortc`) se dělí na části. Řízení toku: max. 1–2 snímky „na cestě“, Python zpracovává jen nejnovější. Video track (VP8/H.264) je možná pozdější alternativa. | 2026-11-21 | brainstorming (Phase 0) |
+| 4 | Docker | Python knihovna běží nativně (venv) — výjimka z Docker politiky: WebRTC (UDP/ICE) v Docker bridge síti nefunguje bez `network_mode: host` a knihovna běží v procesu cizího projektu. Node toolchain frontendu (`web/`) běží v Dockeru podle pravidel. | 2026-11-21 | `spec.md` § 4.7, `DESIGN_RULES.user.md` |
+| 5 | Zastavit E010 na Human gate FT.7 po každém `high` tasku? | Human 2026-11-21 pověřil Plannera pokračovat v implementaci E010 bez čekání na per-task schválení. Zastavit jen u úkonu, který umí jen Human (měření na telefonu, git commit/push na trigger frázi). Reviewer APPROVE zůstává povinný. Gate briefing se zapíše do chatu, neblokuje další task. | 2026-11-21 | chat Planner, `090-apm-orchestration.mdc` § B |
+| 6 | Obsahuje PeerJS 1.5.4 v `OFFER.payload` pole `browser`? | Ne. Ověřeno ve zdroji `peers/peerjs` tag `v1.5.4`, `lib/negotiator.ts` `_makeOffer`. Povinná pole data OFFER jsou `sdp`, `type`, `connectionId`, `metadata`, `label`, `reliable`, `serialization`. Pole `browser` z T010 spec § 2 pocházelo ze staršího `peerjs.min.js` a Python answerer ho nevyžaduje. Python smí do `ANSWER` dál přidat `browser: "aiortc"`; PeerJS 1.5.4 ho ignoruje a čte jen SDP. | 2026-11-21 | E010.T020 review kolo 1, `plan.md` konvence |
+| 7 | Potvrdit transport MVP po spiku E010, nebo přejít na fallback? | Potvrdit WebRTC DataChannel přes PeerJS cloud a `aiortc`. Chrome na Androidu ve stejné Wi-Fi navázal DataChannel (ICE `host/prflx`, pak `host/host`, UDP, bez TURN). Kvalita 0,6 a jeden snímek na cestě: 24 FPS, medián RTT 18 ms. Pauza uprostřed matice a neověřený limit 64 KB nemění volbu transportu. | 2026-11-22 | `doc/architecture/decisions/ADR-001-transport-webrtc-peerjs.md` |
+| 8 | Měnit roadmapu po E010? | Ne. E020–E040 zůstávají. Human 2026-11-22 požádal pokračovat v realizaci všech epik a zastavit se jen když je nutný jeho úkon. | 2026-11-22 | FER.2, `roadmap.md` |

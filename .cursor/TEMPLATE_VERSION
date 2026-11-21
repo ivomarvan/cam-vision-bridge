@@ -1,0 +1,4 @@
+source:     git@github.com:ivomarvan/cursor-best-practices-template.git
+version:    v1.2.0-1-gbb135f1
+generated:  2026-11-21T18:51:55Z
+generator:  scripts/install_into_project.py

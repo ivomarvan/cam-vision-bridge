@@ -1,0 +1,114 @@
+---
+description: >-
+  APM role → model policy. Roles (Planner, Coder, Reviewer) are capability intents, not
+  fixed models. The concrete per-role assignment is resolved from AGENT_MODELS config —
+  see the Config Resolution mechanism in `200-project-design-rules.mdc`.
+alwaysApply: true
+---
+
+# Model Policy
+
+## Principle — roles are not bound to fixed models
+
+Models and their prices evolve. This policy therefore defines **roles and their capability
+intent**, never hardcoded model names. The concrete model is resolved from **AGENT_MODELS
+config** (see below), not from this rule.
+
+The economic core of APM stays the same: **strong model for thinking (Planner, Reviewer),
+cheaper model for typing (Coder).**
+
+## Roles and capability intent
+
+| Role | Used in | Capability intent |
+|---|---|----|
+| **Planner** | Phase 0, E, ER | strong reasoning — planning, decomposition, context |
+| **Reviewer** | Phase R | strong reasoning, independent of the Coder |
+| **Coder** | Phase T | fast / cost-effective; a stronger model for complex Tasks |
+
+
+## AGENT_MODELS config (Active Role Assignments)
+
+The concrete model per role lives in **AGENT_MODELS config**, resolved per the Config
+Resolution mechanism in `200-project-design-rules.mdc`:
+`.cursor/apm_config/AGENT_MODELS.default.md` unless overridden in full by
+`doc/apm_config/AGENT_MODELS.user.md`.
+
+## Resolution rule (MUST)
+
+When an APM skill starts work in a role:
+
+1. Read the resolved *Active Role Assignments* table (AGENT_MODELS config, see above).
+2. **Assigned** — two delivery paths, depending on where the role runs:
+   - *Role in the parent chat window* (typically Planner): state the model and remind the
+     Human to select it in Cursor's model selector — Cursor does not switch it for you.
+   - *Role run as a subagent* (typically Coder, Reviewer — see `090-apm-orchestration.mdc`):
+     pass the resolved slug as the subagent call's `model` parameter. If that slug is not
+     offered for subagents, use the nearest cell of the same band and record the
+     substitution in the resulting `report.md` / `review.md`.
+3. **`unassigned`** → **ASK** the Human which model to use for this role before doing any
+   work. Offer to persist the answer via `/role-assign`.
+4. **`—`** → the cell does not apply (e.g. Reviewer `low` = deterministic gate only, Planner
+   `low` = never occurs). Do not ask; do not run an LLM in that role for that band.
+
+Never silently assume a model. Never invent model names outside the resolved table.
+
+## Bands
+
+A Task's difficulty is not judged by feel — it is a **band**, decided upfront from
+deterministic triggers, independent of which model ends up running it. `AGENT_MODELS`
+config is keyed by role × band, not by role alone.
+
+| Band | When |
+|---|---|
+| `low` | Mechanical: no new public interface, no new dependency, result fully checkable by a test or linter |
+| `medium` | Everything else: new module/endpoint, new dependency, tests that need design |
+| `high` | At least one hard trigger fires (see below) |
+
+Generic hard triggers for `high` — a project's `AGENT_MODELS.user.md` MAY add more
+(project-specific risk areas), never remove these:
+- Database schema or migration change.
+- CI/build/deploy configuration, or anything under `.cursor/`.
+- A contract another Task or Epic depends on.
+- Deletion of files or data.
+- Handling of untrusted/external input (see `080-agent-security.mdc`).
+
+**Granularity:** Planner is banded **per Epic** (max over its Tasks — it plans once, for
+the whole Epic); Coder and Reviewer are banded **per Task**.
+
+### Escalation (deterministic, not a judgment call)
+
+| Trigger | Action | Who |
+|---|---|---|
+| A Task gets a **second** `REQUEST CHANGES` | Raise its band one step; hand the same Task to a Coder of the new band | automatic |
+| A Task already at `high` gets a second `REQUEST CHANGES` | **Stop**, escalate to Human — the problem is the spec, not the model | automatic |
+| The Epic's first two Tasks each needed more than one review round | Raise the Epic's default band one step | automatic |
+| Any time | **Lower** a band | Human only |
+
+The 3-round review cap (`070-project-management.mdc`) applies independently and takes
+precedence. Review history is never deleted — a new round is appended, so an escalation
+stays visible. Gate and report tier for a Task follow its band — see
+`090-apm-orchestration.mdc`.
+
+The template default sets **Reviewer `low` = `—`**: the deterministic gate (tests/lint/
+types) is the review for mechanical changes; an LLM reviewer would add nothing there. A
+project MAY assign a model to that cell in `AGENT_MODELS.user.md` if its `low` Tasks are
+not fully gate-checkable. Never leave it `unassigned` — that would make every `low` Task
+stop to ask the Human.
+
+## Audit trail
+
+The `model:` field in APM document front matter records the **actual** model that produced
+the document. Keep it concrete (it may be a dated snapshot) — that is history, not policy.
+
+## Cursor limitation
+
+Cursor does **not** switch the parent chat window's model per skill or role — for that
+window an assignment is documented intent + a reminder for the Human. Subagents are the
+exception: their model is set per call (Resolution rule, step 2). The subagent slug list
+differs from the UI list and changes over time — verify before switching a profile.
+
+## Commands
+
+- `/role-assign` — assign a model to a role (asks if role/model not given); writes to the
+  resolved `AGENT_MODELS.user.md` (created from the default if it does not exist yet).
+- `/role-show` — show the current Active Role Assignments.
