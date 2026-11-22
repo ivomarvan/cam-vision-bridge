@@ -221,3 +221,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Vue (web/)
+web/node_modules/
+web/dist/
+web/coverage/
+web/.vite/
