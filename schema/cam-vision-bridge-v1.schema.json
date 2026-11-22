@@ -1,0 +1,732 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CamVisionBridgeV1TextMessage",
+  "description": "Protocol v1 JSON messages. Field t selects the message and v is 1. Result items are a second t-discriminated union inside result.items.",
+  "$defs": {
+    "Box": {
+      "additionalProperties": false,
+      "description": "Axis-aligned rectangle in normalized coordinates.",
+      "properties": {
+        "t": {
+          "const": "box",
+          "title": "T",
+          "type": "string"
+        },
+        "x": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "w": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "W",
+          "type": "number"
+        },
+        "h": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "H",
+          "type": "number"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "t",
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
+    "ErrorMessage": {
+      "additionalProperties": false,
+      "description": "Failure notice the phone can show. The connection stays up.",
+      "properties": {
+        "v": {
+          "const": 1,
+          "title": "V",
+          "type": "integer"
+        },
+        "t": {
+          "const": "error",
+          "title": "T",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        }
+      },
+      "required": [
+        "v",
+        "t",
+        "reason"
+      ],
+      "title": "ErrorMessage",
+      "type": "object"
+    },
+    "FrameHeader": {
+      "additionalProperties": false,
+      "description": "JSON header of one binary frame chunk.\n\n``part``, ``parts``, and ``total_bytes`` are plain integers in this model.\nRange checks belong to the frame codec, which runs before JPEG decode.",
+      "properties": {
+        "v": {
+          "const": 1,
+          "title": "V",
+          "type": "integer"
+        },
+        "t": {
+          "const": "frame",
+          "title": "T",
+          "type": "string"
+        },
+        "frame_id": {
+          "minimum": 0,
+          "title": "Frame Id",
+          "type": "integer"
+        },
+        "captured_at": {
+          "title": "Captured At",
+          "type": "string"
+        },
+        "w": {
+          "minimum": 1,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "minimum": 1,
+          "title": "H",
+          "type": "integer"
+        },
+        "part": {
+          "title": "Part",
+          "type": "integer"
+        },
+        "parts": {
+          "title": "Parts",
+          "type": "integer"
+        },
+        "total_bytes": {
+          "title": "Total Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "v",
+        "t",
+        "frame_id",
+        "captured_at",
+        "w",
+        "h",
+        "part",
+        "parts",
+        "total_bytes"
+      ],
+      "title": "FrameHeader",
+      "type": "object"
+    },
+    "Hello": {
+      "additionalProperties": false,
+      "description": "Phone handshake: user-agent, camera facing, and capture size.",
+      "properties": {
+        "v": {
+          "const": 1,
+          "title": "V",
+          "type": "integer"
+        },
+        "t": {
+          "const": "hello",
+          "title": "T",
+          "type": "string"
+        },
+        "device_ua": {
+          "title": "Device Ua",
+          "type": "string"
+        },
+        "camera": {
+          "anyOf": [
+            {
+              "enum": [
+                "user",
+                "environment"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Camera"
+        },
+        "width": {
+          "minimum": 1,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "minimum": 1,
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "v",
+        "t",
+        "device_ua",
+        "width",
+        "height"
+      ],
+      "title": "Hello",
+      "type": "object"
+    },
+    "Keypoints": {
+      "additionalProperties": false,
+      "description": "Normalized points and optional segments between them.",
+      "properties": {
+        "t": {
+          "const": "keypoints",
+          "title": "T",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/Point"
+          },
+          "title": "Points",
+          "type": "array"
+        },
+        "edges": {
+          "anyOf": [
+            {
+              "items": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Edges"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "t",
+        "points"
+      ],
+      "title": "Keypoints",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One named number for the phone metrics panel.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "description": "Named numbers for the phone metrics panel.",
+      "properties": {
+        "t": {
+          "const": "metrics",
+          "title": "T",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "t",
+        "metrics"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "Point": {
+      "additionalProperties": false,
+      "description": "One normalized coordinate pair relative to the sent frame.",
+      "properties": {
+        "x": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "Polygon": {
+      "additionalProperties": false,
+      "description": "Closed shape with at least three normalized points.",
+      "properties": {
+        "t": {
+          "const": "polygon",
+          "title": "T",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/Point"
+          },
+          "minItems": 3,
+          "title": "Points",
+          "type": "array"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "t",
+        "points"
+      ],
+      "title": "Polygon",
+      "type": "object"
+    },
+    "Polyline": {
+      "additionalProperties": false,
+      "description": "Open chain of at least two normalized points.",
+      "properties": {
+        "t": {
+          "const": "polyline",
+          "title": "T",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/Point"
+          },
+          "minItems": 2,
+          "title": "Points",
+          "type": "array"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "t",
+        "points"
+      ],
+      "title": "Polyline",
+      "type": "object"
+    },
+    "Quad": {
+      "additionalProperties": false,
+      "description": "Four-corner polygon in normalized coordinates.",
+      "properties": {
+        "t": {
+          "const": "quad",
+          "title": "T",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/Point"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Points",
+          "type": "array"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "t",
+        "points"
+      ],
+      "title": "Quad",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "description": "Overlay payload for one frame: items plus time spent processing it.",
+      "properties": {
+        "v": {
+          "const": 1,
+          "title": "V",
+          "type": "integer"
+        },
+        "t": {
+          "const": "result",
+          "title": "T",
+          "type": "string"
+        },
+        "frame_id": {
+          "minimum": 0,
+          "title": "Frame Id",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "box": "#/$defs/Box",
+                "keypoints": "#/$defs/Keypoints",
+                "metrics": "#/$defs/Metrics",
+                "polygon": "#/$defs/Polygon",
+                "polyline": "#/$defs/Polyline",
+                "quad": "#/$defs/Quad",
+                "text": "#/$defs/Text"
+              },
+              "propertyName": "t"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Box"
+              },
+              {
+                "$ref": "#/$defs/Quad"
+              },
+              {
+                "$ref": "#/$defs/Polygon"
+              },
+              {
+                "$ref": "#/$defs/Keypoints"
+              },
+              {
+                "$ref": "#/$defs/Polyline"
+              },
+              {
+                "$ref": "#/$defs/Text"
+              },
+              {
+                "$ref": "#/$defs/Metrics"
+              }
+            ]
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "processing_ms": {
+          "minimum": 0,
+          "title": "Processing Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "v",
+        "t",
+        "frame_id",
+        "items",
+        "processing_ms"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Text": {
+      "additionalProperties": false,
+      "description": "A string drawn at a point, or in the text panel when coordinates are absent.",
+      "properties": {
+        "t": {
+          "const": "text",
+          "title": "T",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Y"
+        }
+      },
+      "required": [
+        "t",
+        "text"
+      ],
+      "title": "Text",
+      "type": "object"
+    },
+    "Welcome": {
+      "additionalProperties": false,
+      "description": "PC reply: optional requested capture size and frame rate.",
+      "properties": {
+        "v": {
+          "const": 1,
+          "title": "V",
+          "type": "integer"
+        },
+        "t": {
+          "const": "welcome",
+          "title": "T",
+          "type": "string"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "fps": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fps"
+        }
+      },
+      "required": [
+        "v",
+        "t"
+      ],
+      "title": "Welcome",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "error": "#/$defs/ErrorMessage",
+      "frame": "#/$defs/FrameHeader",
+      "hello": "#/$defs/Hello",
+      "result": "#/$defs/Result",
+      "welcome": "#/$defs/Welcome"
+    },
+    "propertyName": "t"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Hello"
+    },
+    {
+      "$ref": "#/$defs/Welcome"
+    },
+    {
+      "$ref": "#/$defs/ErrorMessage"
+    },
+    {
+      "$ref": "#/$defs/FrameHeader"
+    },
+    {
+      "$ref": "#/$defs/Result"
+    }
+  ]
+}
