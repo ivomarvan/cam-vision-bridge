@@ -20,6 +20,17 @@ Resolution mechanism in `rules/200-project-design-rules.mdc`.
 
 ## Overrides of template rules
 
+**[project]** Explicit override of `rules/090-apm-orchestration.mdc` § B and of
+`rules/070-project-management.mdc` Phase E (FE.2) and Phase R ("then Human reviews").
+The binding text is `rules/910-epic-human-gate.mdc` (DECISIONS #11):
+
+- Reviewer `APPROVE` is still required on every Task. A failed review or a question
+  only the Human can answer stops the Epic.
+- The Human does not approve each Task. The Human approves the finished Epic
+  (FER.2).
+- After the Human has asked to carry out an Epic, do not wait for a separate plan
+  approval before the Tasks start.
+
 **[project]** Explicit override of `rules/100-python.mdc` § *Imports and Structure*
 (`from src.… import`, `git_root_to_syspath`):
 

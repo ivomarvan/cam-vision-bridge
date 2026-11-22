@@ -1,0 +1,41 @@
+---
+description: >-
+  Project override of the APM Human gate. Reviewer approval stays per Task.
+  The Human approves a finished Epic, not each Task, unless the Task is blocked
+  or Reviewer approval fails.
+alwaysApply: true
+---
+
+# Epic-level Human approval
+
+<!-- cs: Schvalování na úrovni epiky -->
+
+This rule **overrides** `rules/090-apm-orchestration.mdc` § B (the Human-gate column)
+and `rules/070-project-management.mdc` where Phase R says "then Human reviews" and
+where Phase E waits for Human approval of the plan before any Task starts
+(FE.2 / FT.7). Report tiers by band stay as written in `090`.
+<!-- cs: Toto pravidlo přebíjí sloupec Human gate v rules/090-apm-orchestration.mdc § B a místa v rules/070-project-management.mdc, kde Phase R říká „then Human reviews“ a kde Phase E čeká na schválení plánu člověkem, než začne jakýkoli task (FE.2 / FT.7). Úroveň reportu podle pásma zůstává podle 090. -->
+
+## What stays
+
+<!-- cs: Co zůstává -->
+
+- Every Task still needs a Reviewer verdict. `REQUEST CHANGES` is fixed and
+  re-reviewed. The three-round cap and band escalation in `000-model-policy.mdc`
+  stay.
+- A Task the Reviewer cannot approve, or a question only the Human can answer,
+  stops the Epic. Ask one question (`005-decision-protocol.mdc`).
+- Git commit and push still need an explicit trigger (`020-git.mdc`) or an
+  explicit exception in the Human's message.
+
+## What changes
+
+<!-- cs: Co se mění -->
+
+- Do not open a Human gate after a Task, in any band, when that Task has
+  Reviewer `APPROVE` and no blocking question.
+- Do not wait for FE.2 once the Human has asked to carry out the Epic.
+- Finish every remaining Task of the Epic, then open one Human gate for the
+  Epic (Phase ER, FER.2), using the briefing in `090` § C.
+- The Human approves or rejects the Epic there. Per-task approval is not
+  required.
