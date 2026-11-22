@@ -12,8 +12,8 @@ updated_at: 2026-11-22
 
 # Definition of Done: E030.T020
 
-- [ ] `web/src/protocol/generated.ts` vznikl ze schématu a má zákaz ruční editace
-- [ ] Test shody s novým během generátoru prochází
-- [ ] Brána v Dockeru je zelená
-- [ ] All new tests pass
-- [ ] Full test suite passes (no regressions)
+- [x] ✅ `web/src/protocol/generated.ts` vznikl ze schématu a má zákaz ruční editace
+- [x] ✅ Test shody s novým během generátoru prochází
+- [x] ✅ Brána v Dockeru je zelená
+- [x] ✅ All new tests pass
+- [x] ✅ Full test suite passes (no regressions)

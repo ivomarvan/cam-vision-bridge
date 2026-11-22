@@ -34,7 +34,14 @@ docker compose run --rm web npx eslint .
 docker compose run --rm web npx vitest run
 ```
 
-`node_modules` live in the image; the compose file mounts `./web` for hot reload and uses a named volume for `/app/node_modules`.
+`node_modules` live in the image; the compose file mounts `./web` for hot reload, `./schema` read-only at `/schema` so `npm run generate:protocol` and the drift test see the committed JSON Schema, and uses a named volume for `/app/node_modules`.
+
+Regenerate protocol types after a schema change:
+
+```bash
+# Container user appuser cannot write the host bind mount; match the host uid.
+docker compose run --rm --user "$(id -u):$(id -g)" web npm run generate:protocol
+```
 
 ## Maintenance
 

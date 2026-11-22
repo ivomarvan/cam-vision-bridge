@@ -28,7 +28,7 @@ už pak cizí projekt neřeší.
   - jádro `FrameHub` (asyncio): drží jen nejnovější snímek, řídí tok;
   - transport `PeerJsWebRtcTransport` (aiortc + minimální klient PeerJS signalizace) za
     rozhraním `Transport`; `FakeTransport` v paměti pro testy;
-  - po startu vypíše do terminálu URL a QR kód pro spárování mobilu.
+  - `start()` vrátí párovací URL; `show_pairing_qr` vypíše ji a ASCII QR. Smyčkový host nahradí IPv4 adresou tohoto počítače v LAN (DECISIONS #15).
 - **Webová stránka pro mobil** (`web/`, Vue 3 + Vite + TypeScript), hostovaná na GitHub
   Pages pod cestou s hlavní verzí protokolu (`/cam-vision-bridge/v1/`):
   - kamera (přední/zadní), zmenšení snímku, JPEG, odeslání přes DataChannel;
@@ -82,9 +82,12 @@ flowchart LR
   DC1 <== snímky a výsledky P2P ==> DC2
 ```
 
-- **Spárování:** `PhoneCamera` vygeneruje náhodné PeerJS ID a vypíše QR kód s URL
-  `https://ivomarvan.github.io/cam-vision-bridge/v1/#peer=<id>`. Spojení zahajuje mobil,
-  Python odpovídá. Peer ID je v hash části URL, takže se neposílá na server GitHub Pages.
+- **Spárování:** `PhoneCamera` vygeneruje náhodné PeerJS ID. `show_pairing_qr` vypíše QR
+  s celou URL včetně `#peer=<id>`. Výchozí stránka knihovny je
+  `https://ivomarvan.github.io/cam-vision-bridge/v1/`. Když je v URL smyčkový host,
+  QR použije IPv4 adresu tohoto počítače, aby šel naskenovat z jiného zařízení
+  (DECISIONS #15). Spojení zahajuje mobil, Python odpovídá. Peer ID je v hash části
+  URL, takže se neposílá na server, který stránku jen doručí.
 - **Na PC neběží žádný HTTP server.** Knihovna je čistý klient: PeerJS signalizace přes
   WebSocket klienta, data přes WebRTC. (Původní předpoklad FastAPI z briefu tím odpadá.)
 - PeerJS spojení používá `serialization: "raw"`, aby PeerJS nepřidával vlastní kódování

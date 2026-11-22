@@ -12,7 +12,12 @@ import cv2
 import numpy as np
 import pytest
 
-from cam_vision_bridge import ConnectionTimeout, PhoneCamera, TransportNotConfigured
+from cam_vision_bridge import (
+    ConnectionTimeout,
+    PhoneCamera,
+    TransportNotConfigured,
+    show_pairing_qr,
+)
 from cam_vision_bridge.core.frame import Frame
 from cam_vision_bridge.protocol import Box
 from cam_vision_bridge.protocol.frame_codec import split_jpeg
@@ -35,6 +40,7 @@ def _started(
     peer_id: str | None = _PEER,
     connect_timeout_s: float | None = 2.0,
     page_url: str = _PAGE,
+    capture_size: tuple[int, int] | None = None,
 ) -> Iterator[tuple[PhoneCamera, FakeTransport]]:
     transport = FakeTransport()
     camera = PhoneCamera(
@@ -42,6 +48,7 @@ def _started(
         peer_id=peer_id,
         connect_timeout_s=connect_timeout_s,
         page_url=page_url,
+        capture_size=capture_size,
     )
     camera.start()
     try:
@@ -88,10 +95,14 @@ def test_frames_before_start_raises_runtime_error() -> None:
         camera.close()
 
 
-def test_start_prints_url_with_peer_and_ascii_qr(capsys: pytest.CaptureFixture[str]) -> None:
+def test_start_returns_url_and_show_pairing_qr_prints_it(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     camera = PhoneCamera(FakeTransport(), peer_id=None)
     try:
         url = camera.start()
+        quiet = capsys.readouterr().out
+        show_pairing_qr(url)
     finally:
         camera.close()
     out = capsys.readouterr().out
@@ -100,8 +111,16 @@ def test_start_prints_url_with_peer_and_ascii_qr(capsys: pytest.CaptureFixture[s
     assert len(peer) == len("cvb-") + 16
     assert peer.startswith("cvb-")
     int(peer.removeprefix("cvb-"), 16)
+    assert url not in quiet
     assert url in out
     assert "█" in out
+
+
+def test_show_pairing_qr_rejects_a_blank_or_multiline_url() -> None:
+    with pytest.raises(ValueError, match="single non-empty line"):
+        show_pairing_qr("")
+    with pytest.raises(ValueError, match="single non-empty line"):
+        show_pairing_qr("http://example.test/\n#peer=cvb-aa")
 
 
 def test_frames_publish_fake_jpeg_result_has_same_frame_id() -> None:
@@ -131,6 +150,47 @@ def test_frames_publish_fake_jpeg_result_has_same_frame_id() -> None:
     assert isinstance(items, list)
     assert items[0]["t"] == "box"
     assert items[0]["label"] == "mark"
+
+
+def test_hello_then_welcome_includes_requested_capture_size() -> None:
+    with _started(capture_size=(1280, 720), peer_id="cvb-size00000000001") as (camera, transport):
+        transport.feed_bytes(_hello())
+        transport.feed_bytes(_jpeg(frame_id=1))
+        next(camera.frames())
+        sent = transport.drain_sent_json()
+
+    welcome = next(message for message in sent if message.get("t") == "welcome")
+    assert welcome["v"] == 1
+    assert welcome["t"] == "welcome"
+    assert welcome["width"] == 1280
+    assert welcome["height"] == 720
+    assert "fps" not in welcome
+
+
+def test_capture_size_none_omits_width_and_height_from_welcome() -> None:
+    with _started(capture_size=None, peer_id="cvb-nosize000000001") as (camera, transport):
+        transport.feed_bytes(_hello())
+        transport.feed_bytes(_jpeg(frame_id=1))
+        next(camera.frames())
+        sent = transport.drain_sent_json()
+
+    welcome = next(message for message in sent if message.get("t") == "welcome")
+    assert welcome == {"v": 1, "t": "welcome"}
+    assert "width" not in welcome
+    assert "height" not in welcome
+
+
+@pytest.mark.parametrize(
+    "capture_size",
+    [(0, 480), (-1, 480), (1280, 0), (1.5, 480), (1280, "720"), (True, 480)],
+)
+def test_invalid_capture_size_raises_value_error_before_transport_starts(
+    capture_size: tuple[object, object],
+) -> None:
+    transport = FakeTransport()
+    with pytest.raises(ValueError, match="capture_size"):
+        PhoneCamera(transport, peer_id=_PEER, capture_size=capture_size)  # type: ignore[arg-type]
+    assert transport._loop is None
 
 
 def test_run_callback_result_is_sent_on_fake_transport() -> None:

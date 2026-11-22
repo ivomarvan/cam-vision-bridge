@@ -1,0 +1,78 @@
+# Publish the phone page to GitHub Pages on push to master.
+#
+# pull_request is omitted on purpose. A workflow that grants pages:write must not
+# run for a fork pull request: that event would execute untrusted code with a
+# token that can publish the site. Deploy happens only from this repository's
+# master branch. No repository secrets are used; Pages auth is the job's OIDC token.
+
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time. An in-progress deploy is left to finish;
+# a second push waits instead of publishing over it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 22.12.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Check Pages asset prefix
+        run: grep -q '/cam-vision-bridge/v1/' web/dist/index.html
+
+      # Project Pages serves the artifact root at /cam-vision-bridge/.
+      # Vite base is /cam-vision-bridge/v1/, so the built tree must sit in v1/.
+      # Upload path stays web/dist. A later protocol major has to ship previous
+      # vN directories in the same artifact: a Pages deploy replaces the whole site.
+      - name: Place build under v1
+        run: |
+          staging="$(mktemp -d)"
+          mv web/dist "${staging}/v1"
+          mkdir web/dist
+          mv "${staging}/v1" web/dist/v1
+          rmdir "${staging}"
+          test -f web/dist/v1/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -12,8 +12,8 @@ updated_at: 2026-11-22
 
 # Definition of Done: E030.T030
 
-- [ ] Kodek sedí na hlavičku protokolu v1
-- [ ] Testy ze `spec.md` § 6 procházejí v Dockeru
-- [ ] Brána je zelená
-- [ ] All new tests pass
-- [ ] Full test suite passes (no regressions)
+- [x] ✅ Kodek sedí na hlavičku protokolu v1
+- [x] ✅ Testy ze `spec.md` § 6 procházejí v Dockeru
+- [x] ✅ Brána je zelená
+- [x] ✅ All new tests pass
+- [x] ✅ Full test suite passes (no regressions)

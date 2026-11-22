@@ -7,6 +7,8 @@ services:
       - "5173:5173"
     volumes:
       - ./web:/app
+      # Generator and its drift test read the committed schema. web/scripts/../../schema is /schema.
+      - ./schema:/schema:ro
       - web_node_modules:/app/node_modules
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 

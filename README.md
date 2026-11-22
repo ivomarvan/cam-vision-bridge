@@ -61,14 +61,16 @@ file drifts from the models.
 ## Public API
 
 `PhoneCamera` is a synchronous façade. `start` runs an asyncio loop on a background
-thread, prints the pairing URL and an ASCII QR code, and returns the URL.
+thread and returns the pairing URL. `show_pairing_qr` prints that URL and an ASCII QR code. A loopback host in the
+URL is replaced with this computer's LAN address before the code is drawn.
 `frames` / `publish` / `run` block the caller. Diagnostics go through `logging`.
 
 ```python
-from cam_vision_bridge import PhoneCamera
+from cam_vision_bridge import PhoneCamera, show_pairing_qr
 
-cam = PhoneCamera(transport)
+cam = PhoneCamera()
 url = cam.start()
+show_pairing_qr(url)
 for frame in cam.frames():
     cam.publish(frame, items)
 cam.close()
@@ -79,10 +81,28 @@ no transport uses `PeerJsWebRtcTransport` (public PeerJS cloud, Google STUN).
 Tests inject `FakeTransport`; that argument is kept as given. `run(callback)`
 publishes the callback's items and lets callback exceptions propagate. `frames`
 raises `ConnectionTimeout` when `connect_timeout_s` elapses with no frame.
+`capture_size=(width, height)` asks for that size in `welcome` (`width` and
+`height` only; `fps` is omitted). The default `None` sends `welcome` without
+dimensions. A zero, a negative number, or a non-integer raises `ValueError`
+before the transport starts.
+
+## Try it
+
+From the repository root:
+
+```bash
+.venv/bin/python examples/run_phone.py
+```
+
+The script starts the phone page when it is not already running, then calls
+`show_pairing_qr`. Scan that one code with the phone or with a PC camera. The
+address in the code is chosen by the library. The Chrome HTTP exception is in
+[`examples/README.md`](examples/README.md).
 
 ## Pairing (overview)
 
-`start` prints a QR code and a URL whose fragment is `#peer=<id>`. The default page
-is `https://ivomarvan.github.io/cam-vision-bridge/v1/`. When `peer_id` is omitted the
-id is `cvb-` plus 16 hex characters. Details and protocol limits are in
+The pairing URL ends with `#peer=<id>`. When `peer_id` is omitted the id is `cvb-`
+plus 16 hex characters. The default page is
+`https://ivomarvan.github.io/cam-vision-bridge/v1/`. That host does not serve this
+working tree until a Pages deploy. Details and protocol limits are in
 `doc/project-progress/spec.md`.

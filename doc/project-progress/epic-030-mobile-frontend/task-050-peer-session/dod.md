@@ -12,10 +12,10 @@ updated_at: 2026-11-22
 
 # Definition of Done: E030.T050
 
-- [ ] Relace mluví protokolem v1 a PeerJS 1.5.4 je pinned
-- [ ] Na cestě je nejvýš jeden snímek
-- [ ] Cizí verze zastaví posílání
-- [ ] Testy nechodí na PeerJS cloud
-- [ ] Brána v Dockeru je zelená
-- [ ] All new tests pass
-- [ ] Full test suite passes (no regressions)
+- [x] ✅ Relace mluví protokolem v1 a PeerJS 1.5.4 je pinned
+- [x] ✅ Na cestě je nejvýš jeden snímek
+- [x] ✅ Cizí verze zastaví posílání
+- [x] ✅ Testy nechodí na PeerJS cloud
+- [x] ✅ Brána v Dockeru je zelená
+- [x] ✅ All new tests pass
+- [x] ✅ Full test suite passes (no regressions)

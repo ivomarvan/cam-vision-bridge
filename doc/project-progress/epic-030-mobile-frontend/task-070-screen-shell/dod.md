@@ -12,9 +12,9 @@ updated_at: 2026-11-22
 
 # Definition of Done: E030.T070
 
-- [ ] Obrazovka má stavy, kameru, panel, FPS a latenci
-- [ ] Wake Lock a fullscreen se při chybějícím API neshodí
-- [ ] Testy store procházejí
-- [ ] Brána v Dockeru je zelená
-- [ ] All new tests pass
-- [ ] Full test suite passes (no regressions)
+- [x] Obrazovka má stavy, kameru, panel, FPS a latenci
+- [x] Wake Lock a fullscreen se při chybějícím API neshodí
+- [x] Testy store procházejí
+- [x] Brána v Dockeru je zelená
+- [x] All new tests pass
+- [x] Full test suite passes (no regressions)

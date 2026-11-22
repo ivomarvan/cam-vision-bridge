@@ -12,8 +12,8 @@ updated_at: 2026-11-22
 
 # Definition of Done: E030.T040
 
-- [ ] `mapPoint` řeší contain, letterbox a zrcadlení x
-- [ ] Testy ze `spec.md` § 6 procházejí
-- [ ] Brána v Dockeru je zelená
-- [ ] All new tests pass
-- [ ] Full test suite passes (no regressions)
+- [x] `mapPoint` řeší contain, letterbox a zrcadlení x
+- [x] Testy ze `spec.md` § 6 procházejí
+- [x] Brána v Dockeru je zelená
+- [x] All new tests pass
+- [x] Full test suite passes (no regressions)

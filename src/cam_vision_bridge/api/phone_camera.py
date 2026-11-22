@@ -1,8 +1,8 @@
 """Synchronous ``PhoneCamera`` façade over a background asyncio loop.
 
 The loop reads one transport, assembles frames in ``FrameHub``, and sends protocol
-JSON back. Callers block in ``frames`` / ``publish`` / ``run``. Pairing URL and QR
-go to stdout; every other diagnostic uses ``logging``.
+JSON back. Callers block in ``frames`` / ``publish`` / ``run``. Pairing QR
+output lives in ``pairing.py``. Every other diagnostic uses ``logging``.
 """
 
 from __future__ import annotations
@@ -12,14 +12,12 @@ import concurrent.futures
 import json
 import logging
 import secrets
-import sys
 import threading
 import time
 from collections import deque
 from collections.abc import Callable, Iterator, Sequence
 from typing import Any, TypeAlias
 
-import qrcode  # type: ignore[import-untyped]  # qrcode==8.2 has no type stubs.
 from pydantic import ValidationError
 
 from cam_vision_bridge.core.frame import Frame
@@ -72,6 +70,7 @@ class PhoneCamera:
         page_url: str = _DEFAULT_PAGE_URL,
         peer_id: str | None = None,
         connect_timeout_s: float | None = None,
+        capture_size: tuple[int, int] | None = None,
     ) -> None:
         """Store pairing options and the transport used after ``start``.
 
@@ -81,15 +80,20 @@ class PhoneCamera:
             peer_id: Signaling id. When omitted, a ``cvb-`` id of 16 hex chars is generated.
             connect_timeout_s: Max seconds ``frames`` waits for the next frame.
                 ``None`` waits until ``close``.
+            capture_size: Requested frame width and height in pixels. ``None`` omits
+                both from ``welcome``. Frame rate is never requested.
 
         Raises:
-            ValueError: If the timeout is negative, or the page URL or peer id is unusable.
+            ValueError: If the timeout is negative, the page URL or peer id is unusable,
+                or ``capture_size`` is not a pair of positive integers.
         """
         _validate_options(page_url, peer_id, connect_timeout_s)
+        _validate_capture_size(capture_size)
         self._transport: Transport = transport if transport is not None else PeerJsWebRtcTransport()
         self._page_url = page_url
         self._peer_id = peer_id
         self._connect_timeout_s = connect_timeout_s
+        self._capture_size = capture_size
         self._init_runtime()
 
     def _init_runtime(self) -> None:
@@ -106,7 +110,10 @@ class PhoneCamera:
         self._url = ""
 
     def start(self) -> str:
-        """Start the background loop, print the pairing URL and QR, and return the URL.
+        """Start the background loop and return the pairing URL.
+
+        The URL is not printed. Call :func:`show_pairing_qr` with it when a person
+        should scan the code.
 
         Returns:
             Page URL whose fragment is ``#peer=<id>``.
@@ -127,7 +134,6 @@ class PhoneCamera:
             self.close()
             raise
         self._started = True
-        _print_pairing(self._url)
         logger.info("phone_camera_started peer_id=%s", peer_id)
         return self._url
 
@@ -269,7 +275,7 @@ class PhoneCamera:
         if isinstance(message, Hello):
             self._hub.camera = message.camera
             logger.info("hello_accepted camera=%s", message.camera)
-            await self._send_message(Welcome(v=1, t="welcome"))
+            await self._send_message(_welcome_message(self._capture_size))
             return
         await self._reject_text(message)
 
@@ -392,6 +398,39 @@ class PhoneCamera:
             await transport.close()
 
 
+def _validate_capture_size(capture_size: tuple[int, int] | None) -> None:
+    """Reject a capture size that is not two positive pixel counts.
+
+    Args:
+        capture_size: Requested width and height, or ``None`` to omit both.
+
+    Raises:
+        ValueError: If the value is not ``None`` and not a pair of integers >= 1.
+    """
+    if capture_size is None:
+        return
+    if (
+        not isinstance(capture_size, tuple)
+        or len(capture_size) != 2
+        or not _positive_pixel(capture_size[0])
+        or not _positive_pixel(capture_size[1])
+    ):
+        raise ValueError("capture_size must be a pair of positive integers or None")
+
+
+def _positive_pixel(value: object) -> bool:
+    # ``bool`` is an ``int`` subclass; a flag is not a pixel count.
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _welcome_message(capture_size: tuple[int, int] | None) -> Welcome:
+    """Build welcome, adding width and height only when a size was requested."""
+    if capture_size is None:
+        return Welcome(v=1, t="welcome")
+    width, height = capture_size
+    return Welcome(v=1, t="welcome", width=width, height=height)
+
+
 def _validate_options(
     page_url: str,
     peer_id: str | None,
@@ -416,16 +455,6 @@ def _generate_peer_id() -> str:
 def _pairing_url(page_url: str, peer_id: str) -> str:
     base = page_url.split("#", 1)[0]
     return f"{base}#peer={peer_id}"
-
-
-def _print_pairing(url: str) -> None:
-    """Write the pairing URL and an ASCII QR code. These two lines are not logs."""
-    print(url, flush=True)
-    code = qrcode.QRCode()
-    code.add_data(url)
-    code.make(fit=True)
-    code.print_ascii(out=sys.stdout)
-    sys.stdout.flush()
 
 
 def _looks_like_json_object(data: bytes) -> bool:

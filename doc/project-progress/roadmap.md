@@ -57,6 +57,8 @@ kontrakt, na kterém závisí E030).
 
 ## Epic E030 — Mobilní frontend a nasazení na GitHub Pages
 
+**Stav 2026-11-22:** hotovo (DECISIONS #13). Telefonní měření DoD projektu zůstává na E040.
+
 - Kostra `web/`: Vue 3 + Vite + TS + Tailwind + Pinia, ESLint, Vitest; Node toolchain
   v Dockeru (DECISIONS #4) + `README.docker.md`.
 - TypeScript typy generované z `schema/`.
@@ -67,6 +69,16 @@ kontrakt, na kterém závisí E030).
 - GitHub Actions: build a nasazení na GitHub Pages pod `/v1/`.
 
 Odhad složitosti: vysoká. Pásmo Planneru: `high` (CI/deploy konfigurace).
+
+## Epic E035 — Volba velikosti snímku
+
+**Stav 2026-11-22:** hotovo (DECISIONS #14). Výchozí zůstává 640×480 kvůli měření ve spec § 6.
+
+- `PhoneCamera(capture_size=(šířka, výška))` pošle požadavek ve `welcome`. Bez parametru se rozměry ve `welcome` neposílají.
+- Telefon nabídne 640×480, 1280×720 a 1920×1080. Po `welcome` i po místní volbě použije nejbližší položku a do JPEG i hlavičky dá velikost, kterou senzor opravdu dal.
+- Přední/zadní kamera se nemění. FPS z `welcome` ani seznam fyzických senzorů sem nepatří.
+
+Odhad složitosti: střední. Pásmo Planneru: `high` (kontrakt `welcome`, nedůvěryhodný vstup z PC).
 
 ## Epic E040 — Ukázka qrdet, dokumentace, ověření DoD projektu
 
