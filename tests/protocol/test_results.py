@@ -46,6 +46,17 @@ def test_parse_result_item_each_tag_round_trips() -> None:
         assert parse_result_item(raw) == item
 
 
+def test_parse_result_item_accepts_a_hex_color_and_rejects_a_name() -> None:
+    parsed = parse_result_item(
+        {"t": "quad", "points": [point.model_dump() for point in _SQUARE], "color": "#39d353"}
+    )
+    assert parsed.color == "#39d353"
+    with pytest.raises(ValidationError):
+        parse_result_item(
+            {"t": "quad", "points": [point.model_dump() for point in _SQUARE], "color": "green"}
+        )
+
+
 def test_parse_result_item_box_coordinates_zero_and_one_are_valid() -> None:
     parsed = parse_result_item({"t": "box", "x": 0, "y": 1, "w": 0, "h": 1})
     assert parsed == Box(t="box", x=0, y=1, w=0, h=1)

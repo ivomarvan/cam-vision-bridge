@@ -1,0 +1,4 @@
+# Demo only. qrdet and qreader pull torch and ultralytics.
+# They stay out of cam_vision_bridge so the library install stays small.
+qrdet==2.5
+qreader==3.16

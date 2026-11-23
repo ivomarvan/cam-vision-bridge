@@ -36,7 +36,8 @@ už pak cizí projekt neřeší.
   - nastavení (kamera, rozlišení, FPS, kvalita JPEG), ukazatel FPS a latence;
   - Screen Wake Lock, fullscreen, srozumitelné stavy spojení a chyby.
 - **Typy výsledků v1:** `box`, `quad`, `polygon`, `keypoints` (s volitelnými hranami),
-  `polyline`, `text` (na pozici nebo do panelu), `metrics`.
+  `polyline`, `text` (na pozici nebo do panelu), `metrics`. Geometrie a text mají
+  volitelnou barvu `#RRGGBB`. Když chybí, telefon kreslí výchozí azurovou.
 - **Ukázka** `examples/qrdet_demo/` s vlastními závislostmi: detekce QR kódů přes qrdet,
   dekódování obsahu přes QReader.
 - Nasazení frontendu na GitHub Pages přes GitHub Actions.

@@ -153,6 +153,7 @@ activemq-data/
 .env
 .envrc
 .venv
+.venv-qrdet/
 env/
 venv/
 ENV/
@@ -221,6 +222,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# WeChat QR weights downloaded by examples/qrdet_wechat
+examples/qrdet_wechat/.models/
 
 # Node / Vue (web/)
 web/node_modules/

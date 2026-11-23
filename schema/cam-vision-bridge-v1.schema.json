@@ -7,6 +7,19 @@
       "additionalProperties": false,
       "description": "Axis-aligned rectangle in normalized coordinates.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "box",
           "title": "T",
@@ -230,6 +243,19 @@
       "additionalProperties": false,
       "description": "Normalized points and optional segments between them.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "keypoints",
           "title": "T",
@@ -373,6 +399,19 @@
       "additionalProperties": false,
       "description": "Closed shape with at least three normalized points.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "polygon",
           "title": "T",
@@ -422,6 +461,19 @@
       "additionalProperties": false,
       "description": "Open chain of at least two normalized points.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "polyline",
           "title": "T",
@@ -471,6 +523,19 @@
       "additionalProperties": false,
       "description": "Four-corner polygon in normalized coordinates.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "quad",
           "title": "T",
@@ -597,6 +662,19 @@
       "additionalProperties": false,
       "description": "A string drawn at a point, or in the text panel when coordinates are absent.",
       "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
         "t": {
           "const": "text",
           "title": "T",

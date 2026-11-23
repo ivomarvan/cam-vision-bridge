@@ -8,6 +8,7 @@
  * Axis-aligned rectangle in normalized coordinates.
  */
 export interface Box {
+  readonly color?: string | null;
   readonly t: 'box';
   readonly x: number;
   readonly y: number;
@@ -61,6 +62,7 @@ export interface Hello {
  * Normalized points and optional segments between them.
  */
 export interface Keypoints {
+  readonly color?: string | null;
   readonly t: 'keypoints';
   readonly points: readonly Point[];
   readonly edges?: readonly (readonly [number, number])[] | null;
@@ -96,6 +98,7 @@ export interface Point {
  * Closed shape with at least three normalized points.
  */
 export interface Polygon {
+  readonly color?: string | null;
   readonly t: 'polygon';
   readonly points: readonly [Point, Point, Point, ...Point[]];
   readonly label?: string | null;
@@ -106,6 +109,7 @@ export interface Polygon {
  * Open chain of at least two normalized points.
  */
 export interface Polyline {
+  readonly color?: string | null;
   readonly t: 'polyline';
   readonly points: readonly [Point, Point, ...Point[]];
   readonly label?: string | null;
@@ -116,6 +120,7 @@ export interface Polyline {
  * Four-corner polygon in normalized coordinates.
  */
 export interface Quad {
+  readonly color?: string | null;
   readonly t: 'quad';
   readonly points: readonly [Point, Point, Point, Point];
   readonly label?: string | null;
@@ -137,6 +142,7 @@ export interface Result {
  * A string drawn at a point, or in the text panel when coordinates are absent.
  */
 export interface Text {
+  readonly color?: string | null;
   readonly t: 'text';
   readonly text: string;
   readonly x?: number | null;

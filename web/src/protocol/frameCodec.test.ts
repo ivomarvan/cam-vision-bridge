@@ -218,6 +218,36 @@ describe('parseServerMessage', () => {
     expect(reasonOf('{"t":"error","reason":"x"}')).toBe('unsupported_version');
   });
 
+  it('keeps a hex color on a quad and rejects a color name', () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ];
+    const parsed = parseServerMessage(
+      JSON.stringify({
+        v: 1,
+        t: 'result',
+        frame_id: 1,
+        processing_ms: 1,
+        items: [{ t: 'quad', color: '#39d353', points }],
+      }),
+    );
+    expect(parsed).toMatchObject({ items: [{ color: '#39d353' }] });
+    expect(() =>
+      parseServerMessage(
+        JSON.stringify({
+          v: 1,
+          t: 'result',
+          frame_id: 1,
+          processing_ms: 1,
+          items: [{ t: 'quad', color: 'green', points }],
+        }),
+      ),
+    ).toThrow(FrameProtocolError);
+  });
+
   it('rejects an unknown key', () => {
     expect(() => parseServerMessage('{"v":1,"t":"welcome","extra":true}')).toThrow(FrameProtocolError);
   });

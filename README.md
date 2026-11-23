@@ -86,6 +86,38 @@ raises `ConnectionTimeout` when `connect_timeout_s` elapses with no frame.
 dimensions. A zero, a negative number, or a non-integer raises `ValueError`
 before the transport starts.
 
+## Result types
+
+`publish` and `run` accept protocol v1 items. Coordinates are fractions of the
+sent frame, from 0 to 1. The phone draws `box`, `quad`, `polygon`, `keypoints`,
+and `polyline` on the preview. `text` without `x` and `y` goes to the text
+panel; with both coordinates it is drawn on the frame. `metrics` is a list of
+named numbers for the metrics panel. An optional `color` (`#RRGGBB`) sets the
+stroke. When it is omitted the phone uses cyan.
+
+`detect_tiled` splits a frame into overlapping tiles, runs a quad detector on
+each, and merges the quads back into full-frame coordinates.
+
+## Limits
+
+The PC and the phone need internet for the public PeerJS cloud and STUN. There
+is no TURN server. One `PhoneCamera` talks to one phone. The library does not
+install torch.
+
+## QR demo
+
+```bash
+python3.12 -m venv .venv-qrdet
+.venv-qrdet/bin/pip install -e .
+.venv-qrdet/bin/pip install -r examples/qrdet_demo/requirements.txt
+.venv-qrdet/bin/python examples/qrdet_demo/run_demo.py
+```
+
+The environment has to be Python 3.12. The library requires Python 3.11 or newer,
+so an older `python` on `PATH` will refuse the install and the script will not
+find the package. Details are in
+[`examples/qrdet_demo/README.md`](examples/qrdet_demo/README.md).
+
 ## Try it
 
 From the repository root:

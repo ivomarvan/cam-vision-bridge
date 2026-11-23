@@ -82,6 +82,9 @@ Odhad složitosti: střední. Pásmo Planneru: `high` (kontrakt `welcome`, nedů
 
 ## Epic E040 — Ukázka qrdet, dokumentace, ověření DoD projektu
 
+**Stav 2026-11-22:** rozpracováno na `master`. Skript a mapování quadů jsou v
+`examples/qrdet_demo/`. Měření na telefonu (spec § 6) zůstává na Humanovi.
+
 - `examples/qrdet_demo/` s vlastními závislostmi (qrdet + QReader; torch mimo knihovnu).
 - Anglické `README.md` (instalace, spárování, API, typy výsledků, omezení).
 - Ruční end-to-end ověření DoD projektu (spec § 6) včetně měření FPS a latence.

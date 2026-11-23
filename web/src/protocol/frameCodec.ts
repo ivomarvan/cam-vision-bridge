@@ -64,12 +64,13 @@ const FRAME_KEYS = new Set([
 ]);
 const RESULT_KEYS = new Set(['v', 't', 'frame_id', 'items', 'processing_ms']);
 const POINT_KEYS = new Set(['x', 'y']);
-const BOX_KEYS = new Set(['t', 'x', 'y', 'w', 'h', 'label', 'score']);
-const QUAD_KEYS = new Set(['t', 'points', 'label', 'score']);
-const POLYGON_KEYS = new Set(['t', 'points', 'label', 'score']);
-const KEYPOINTS_KEYS = new Set(['t', 'points', 'edges', 'label', 'score']);
-const POLYLINE_KEYS = new Set(['t', 'points', 'label', 'score']);
-const TEXT_KEYS = new Set(['t', 'text', 'x', 'y']);
+const BOX_KEYS = new Set(['t', 'x', 'y', 'w', 'h', 'label', 'score', 'color']);
+const QUAD_KEYS = new Set(['t', 'points', 'label', 'score', 'color']);
+const POLYGON_KEYS = new Set(['t', 'points', 'label', 'score', 'color']);
+const KEYPOINTS_KEYS = new Set(['t', 'points', 'edges', 'label', 'score', 'color']);
+const POLYLINE_KEYS = new Set(['t', 'points', 'label', 'score', 'color']);
+const TEXT_KEYS = new Set(['t', 'text', 'x', 'y', 'color']);
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 const METRICS_KEYS = new Set(['t', 'metrics']);
 const METRIC_KEYS = new Set(['name', 'value']);
 
@@ -450,6 +451,7 @@ function parseKeypoints(record: Record<string, unknown>): Keypoints {
     edges?: readonly (readonly [number, number])[] | null;
     label?: string | null;
     score?: number | null;
+    color?: string | null;
   } = {
     t: 'keypoints',
     points: readPointList(record.points, 0),
@@ -477,6 +479,7 @@ function parseText(record: Record<string, unknown>): Text {
     t: 'text',
     text: readString(record, 'text'),
     ...textCoordinates(record),
+    ...colorField(record),
   };
 }
 
@@ -491,15 +494,27 @@ function parseMetrics(record: Record<string, unknown>): Metrics {
 function annotationFields(record: Record<string, unknown>): {
   label?: string | null;
   score?: number | null;
+  color?: string | null;
 } {
-  const fields: { label?: string | null; score?: number | null } = {};
+  const fields: { label?: string | null; score?: number | null; color?: string | null } = {};
   if (hasOwn(record, 'label')) {
     fields.label = readNullableString(record, 'label');
   }
   if (hasOwn(record, 'score')) {
     fields.score = readNullableFinite(record, 'score');
   }
-  return fields;
+  return { ...fields, ...colorField(record) };
+}
+
+function colorField(record: Record<string, unknown>): { color?: string | null } {
+  if (!hasOwn(record, 'color')) {
+    return {};
+  }
+  const color = readNullableString(record, 'color');
+  if (color !== null && !HEX_COLOR.test(color)) {
+    throw new FrameProtocolError('invalid_message');
+  }
+  return { color };
 }
 
 function textCoordinates(record: Record<string, unknown>): { x?: number | null; y?: number | null } {

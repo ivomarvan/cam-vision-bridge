@@ -488,10 +488,14 @@ function parseRecord(text: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+  if (!isJsonRecord(parsed)) {
     return null;
   }
   return parsed;
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function finiteVersion(value: unknown): number | null {

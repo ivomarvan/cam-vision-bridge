@@ -11,6 +11,7 @@ from cam_vision_bridge.api import (
     local_page_url,
     show_pairing_qr,
 )
+from cam_vision_bridge.vision import detect_tiled, merge_quads, split_image
 
 __version__ = "0.1.0"
 
@@ -19,6 +20,9 @@ __all__ = [
     "PhoneCamera",
     "TransportNotConfigured",
     "__version__",
+    "detect_tiled",
     "local_page_url",
+    "merge_quads",
     "show_pairing_qr",
+    "split_image",
 ]

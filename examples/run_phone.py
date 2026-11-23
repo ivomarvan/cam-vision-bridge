@@ -10,17 +10,17 @@ from __future__ import annotations
 
 import argparse
 import logging
-import socket
-import subprocess
 import sys
-import time
 from pathlib import Path
 
 from cam_vision_bridge import PhoneCamera, local_page_url, show_pairing_qr
-from cam_vision_bridge.api.pairing import DEV_PAGE_PORT
 from cam_vision_bridge.protocol import Box
 
-_PAGE_WAIT_S = 60.0
+_EXAMPLES = Path(__file__).resolve().parent
+if str(_EXAMPLES) not in sys.path:
+    sys.path.insert(0, str(_EXAMPLES))
+
+from dev_page import ensure_page  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
-    _ensure_page()
+    ensure_page()
     page_url = args.page_url if args.page_url is not None else local_page_url()
     camera = PhoneCamera(page_url=page_url, capture_size=(args.width, args.height))
     try:
@@ -69,31 +69,6 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=640, help="Requested capture width.")
     parser.add_argument("--height", type=int, default=480, help="Requested capture height.")
     return parser.parse_args(argv)
-
-
-def _ensure_page() -> None:
-    """Start the Vite page when nothing is listening on its port.
-
-    Raises:
-        SystemExit: If Docker does not bring the port up in time.
-    """
-    if _port_open(DEV_PAGE_PORT):
-        return
-    root = Path(__file__).resolve().parents[1]
-    subprocess.run(["docker", "compose", "up", "-d", "web"], cwd=root, check=True)
-    deadline = time.monotonic() + _PAGE_WAIT_S
-    while time.monotonic() < deadline:
-        if _port_open(DEV_PAGE_PORT):
-            return
-        time.sleep(0.5)
-    raise SystemExit(f"phone page did not open port {DEV_PAGE_PORT}")
-
-
-def _port_open(port: int) -> bool:
-    """Return whether this computer accepts TCP connections on ``port``."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(0.3)
-        return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
 if __name__ == "__main__":

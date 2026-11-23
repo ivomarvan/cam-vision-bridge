@@ -1,0 +1,3 @@
+# Install into the qrdet environment. This wheel contains WeChatQRCode and
+# replaces opencv-python / opencv-python-headless in that environment.
+opencv-contrib-python==5.1.0.95

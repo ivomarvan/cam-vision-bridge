@@ -23,6 +23,9 @@ import { mapPoint, type Size } from './mapPoint';
 /** Cyan reads on both bright and dark camera frames. */
 export const OVERLAY_STROKE_STYLE = '#00e5ff';
 
+/** A result color is a CSS hex string. Anything else stays the default cyan. */
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+
 /** Device pixels. One stroke weight for every geometry kind. */
 export const OVERLAY_LINE_WIDTH_PX = 2;
 
@@ -173,7 +176,7 @@ function drawBox(context: OverlayContext, item: Box, mapping: FrameMapping): voi
     { x: item.x + item.w, y: item.y + item.h },
     { x: item.x, y: item.y + item.h },
   ];
-  strokeShape(context, projectAll(corners, mapping), true);
+  strokeShape(context, projectAll(corners, mapping), true, item.color);
 }
 
 function drawClosed(
@@ -181,17 +184,17 @@ function drawClosed(
   item: Quad | Polygon,
   mapping: FrameMapping,
 ): void {
-  strokeShape(context, projectAll(item.points, mapping), true);
+  strokeShape(context, projectAll(item.points, mapping), true, item.color);
 }
 
 function drawOpen(context: OverlayContext, item: Polyline, mapping: FrameMapping): void {
-  strokeShape(context, projectAll(item.points, mapping), false);
+  strokeShape(context, projectAll(item.points, mapping), false, item.color);
 }
 
 function drawKeypoints(context: OverlayContext, item: Keypoints, mapping: FrameMapping): void {
   const mapped = projectAll(item.points, mapping);
-  strokeSegments(context, segmentsFor(mapped, item.edges));
-  strokeMarks(context, mapped);
+  strokeSegments(context, segmentsFor(mapped, item.edges), item.color);
+  strokeMarks(context, mapped, item.color);
 }
 
 function drawText(context: OverlayContext, item: Text, mapping: FrameMapping): boolean {
@@ -202,7 +205,7 @@ function drawText(context: OverlayContext, item: Text, mapping: FrameMapping): b
     return false;
   }
   const point = project({ x, y }, mapping);
-  applyStyle(context);
+  applyStyle(context, item.color);
   context.fillText(item.text, point.x, point.y);
   return true;
 }
@@ -219,13 +222,14 @@ function strokeShape(
   context: OverlayContext,
   points: readonly MappedPoint[],
   close: boolean,
+  color: string | null | undefined,
 ): void {
   const minimum = close ? CLOSED_MIN_POINTS : OPEN_MIN_POINTS;
   const origin = points[0];
   if (origin === undefined || points.length < minimum) {
     return;
   }
-  applyStyle(context);
+  applyStyle(context, color);
   context.beginPath();
   context.moveTo(origin.x, origin.y);
   for (let index = 1; index < points.length; index += 1) {
@@ -268,12 +272,13 @@ function pointAt(points: readonly MappedPoint[], index: number): MappedPoint | u
 function strokeSegments(
   context: OverlayContext,
   segments: readonly (readonly [MappedPoint, MappedPoint])[],
+  color: string | null | undefined,
 ): void {
   const first = segments[0];
   if (first === undefined) {
     return;
   }
-  applyStyle(context);
+  applyStyle(context, color);
   context.beginPath();
   for (const [start, end] of segments) {
     context.moveTo(start.x, start.y);
@@ -282,12 +287,16 @@ function strokeSegments(
   context.stroke();
 }
 
-function strokeMarks(context: OverlayContext, points: readonly MappedPoint[]): void {
+function strokeMarks(
+  context: OverlayContext,
+  points: readonly MappedPoint[],
+  color: string | null | undefined,
+): void {
   const first = points[0];
   if (first === undefined) {
     return;
   }
-  applyStyle(context);
+  applyStyle(context, color);
   context.beginPath();
   for (const point of points) {
     // moveTo starts a new subpath so circles are not joined by a straight line.
@@ -297,9 +306,10 @@ function strokeMarks(context: OverlayContext, points: readonly MappedPoint[]): v
   context.stroke();
 }
 
-function applyStyle(context: OverlayContext): void {
-  context.strokeStyle = OVERLAY_STROKE_STYLE;
-  context.fillStyle = OVERLAY_STROKE_STYLE;
+function applyStyle(context: OverlayContext, color: string | null | undefined): void {
+  const stroke = typeof color === 'string' && HEX_COLOR.test(color) ? color : OVERLAY_STROKE_STYLE;
+  context.strokeStyle = stroke;
+  context.fillStyle = stroke;
   context.lineWidth = OVERLAY_LINE_WIDTH_PX;
   context.font = OVERLAY_FONT;
   context.textBaseline = 'bottom';

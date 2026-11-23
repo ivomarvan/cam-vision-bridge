@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Box, Keypoints, Metrics, Point, Polygon, Polyline, Quad, Text } from '@/protocol/generated';
 
-import { drawItems, type OverlayContext, type ResultItem } from './drawItems';
+import { OVERLAY_STROKE_STYLE, drawItems, type OverlayContext, type ResultItem } from './drawItems';
 import { mapPoint, type Size } from './mapPoint';
 
 const VIEW: Size = { width: 800, height: 480 };
@@ -193,5 +193,17 @@ describe('drawItems', () => {
     expect(callsNamed(recorder, 'lineTo')).toEqual([]);
     expect(callsNamed(recorder, 'arc')).toHaveLength(1);
     expect(callsNamed(recorder, 'stroke')).toHaveLength(1);
+  });
+
+  it('strokes a hex color and keeps cyan when color is absent', () => {
+    const colored = new CallRecorder();
+    const plain = new CallRecorder();
+    const box: Box = { t: 'box', x: 0, y: 0, w: 0.2, h: 0.2, color: '#39d353' };
+
+    drawItems(contextOf(colored), [box], VIEW, FRAME, false);
+    drawItems(contextOf(plain), [{ t: 'box', x: 0, y: 0, w: 0.2, h: 0.2 }], VIEW, FRAME, false);
+
+    expect(colored.strokeStyle).toBe('#39d353');
+    expect(plain.strokeStyle).toBe(OVERLAY_STROKE_STYLE);
   });
 });

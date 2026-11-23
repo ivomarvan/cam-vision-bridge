@@ -18,6 +18,7 @@ _POLYLINE_MIN_POINTS = 2
 
 _UnitInterval = Annotated[float, Field(ge=0, le=1)]
 _NodeIndex = Annotated[int, Field(ge=0)]
+_HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 
 
 class _ProtocolModel(BaseModel):
@@ -28,6 +29,12 @@ class _ProtocolModel(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class _HasColor(_ProtocolModel):
+    """Optional stroke color. Absent means the phone keeps its default cyan."""
+
+    color: _HexColor | None = None
 
 
 class Point(_ProtocolModel):
@@ -44,7 +51,7 @@ class Metric(_ProtocolModel):
     value: float
 
 
-class Box(_ProtocolModel):
+class Box(_HasColor):
     """Axis-aligned rectangle in normalized coordinates."""
 
     t: Literal["box"]
@@ -56,7 +63,7 @@ class Box(_ProtocolModel):
     score: float | None = None
 
 
-class Quad(_ProtocolModel):
+class Quad(_HasColor):
     """Four-corner polygon in normalized coordinates."""
 
     t: Literal["quad"]
@@ -68,7 +75,7 @@ class Quad(_ProtocolModel):
     score: float | None = None
 
 
-class Polygon(_ProtocolModel):
+class Polygon(_HasColor):
     """Closed shape with at least three normalized points."""
 
     t: Literal["polygon"]
@@ -77,7 +84,7 @@ class Polygon(_ProtocolModel):
     score: float | None = None
 
 
-class Keypoints(_ProtocolModel):
+class Keypoints(_HasColor):
     """Normalized points and optional segments between them."""
 
     t: Literal["keypoints"]
@@ -87,7 +94,7 @@ class Keypoints(_ProtocolModel):
     score: float | None = None
 
 
-class Polyline(_ProtocolModel):
+class Polyline(_HasColor):
     """Open chain of at least two normalized points."""
 
     t: Literal["polyline"]
@@ -96,7 +103,7 @@ class Polyline(_ProtocolModel):
     score: float | None = None
 
 
-class Text(_ProtocolModel):
+class Text(_HasColor):
     """A string drawn at a point, or in the text panel when coordinates are absent."""
 
     t: Literal["text"]
